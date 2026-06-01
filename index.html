@@ -2,18 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • All Sources + Source Order</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>WizhuB • Responsive • All Sources</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* responsive extras */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
+    body { background: #0a0c10; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .glass-nav {
       background: rgba(10, 12, 16, 0.85);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(250, 204, 21, 0.2);
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 50;
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
     }
     .movie-card {
       transition: transform 0.25s ease, box-shadow 0.25s;
@@ -72,9 +84,15 @@
       gap: 1rem;
       scrollbar-width: thin;
       padding-bottom: 0.5rem;
+      -webkit-overflow-scrolling: touch;
     }
     .horizontal-scroll .movie-card {
-      flex: 0 0 160px;
+      flex: 0 0 140px;
+    }
+    @media (min-width: 768px) {
+      .horizontal-scroll .movie-card {
+        flex: 0 0 160px;
+      }
     }
     .modal {
       display: none;
@@ -137,26 +155,65 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    /* responsive grid for trending */
+    .trending-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+    @media (min-width: 640px) {
+      .trending-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 768px) {
+      .trending-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .trending-grid { grid-template-columns: repeat(5, 1fr); }
+    }
+    @media (min-width: 1280px) {
+      .trending-grid { grid-template-columns: repeat(6, 1fr); }
+    }
+    /* player panel responsive */
+    @media (max-width: 768px) {
+      .player-panel .detail-poster {
+        width: 120px;
+        margin: 0 auto;
+      }
+      .player-panel .flex-col {
+        flex-direction: column;
+      }
+      .episode-nav {
+        flex-wrap: wrap;
+      }
+      .glass-nav .flex-1 {
+        order: 3;
+        width: 100%;
+        margin-top: 0.5rem;
+      }
+    }
+    input, select, button {
+      font-size: 16px; /* prevents zoom on mobile */
+    }
   </style>
 </head>
 <body class="text-gray-200">
 
-<!-- Navigation -->
-<nav class="glass-nav fixed top-0 left-0 w-full z-50 px-6 py-3 flex flex-wrap justify-between items-center gap-3">
+<!-- Navigation (responsive) -->
+<nav class="glass-nav">
   <div class="flex items-center gap-2">
-    <i class="fas fa-crown text-3xl text-yellow-400"></i>
-    <span class="text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">WizhuB</span>
+    <i class="fas fa-crown text-2xl md:text-3xl text-yellow-400"></i>
+    <span class="text-xl md:text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">WizhuB</span>
   </div>
   <div class="flex-1 max-w-md relative">
     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
     <input type="text" id="globalSearch" placeholder="Search movies or TV shows..." class="w-full bg-gray-900/80 border border-gray-700 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-yellow-500/60 text-sm">
   </div>
   <div id="authContainer" class="flex gap-2">
-    <button id="showLoginBtn" class="px-4 py-1.5 rounded-full border border-yellow-500 text-yellow-400 text-sm hover:bg-yellow-500/10 transition">Login</button>
-    <button id="showSignupBtn" class="px-4 py-1.5 rounded-full bg-yellow-500 text-black text-sm font-semibold hover:bg-yellow-400 transition">Sign up</button>
+    <button id="showLoginBtn" class="px-3 py-1.5 md:px-4 rounded-full border border-yellow-500 text-yellow-400 text-sm hover:bg-yellow-500/10 transition">Login</button>
+    <button id="showSignupBtn" class="px-3 py-1.5 md:px-4 rounded-full bg-yellow-500 text-black text-sm font-semibold hover:bg-yellow-400 transition">Sign up</button>
   </div>
   <div id="userContainer" class="hidden items-center gap-3">
-    <span id="userEmailDisplay" class="text-sm text-yellow-300 truncate max-w-[150px]"></span>
+    <span id="userEmailDisplay" class="text-sm text-yellow-300 truncate max-w-[120px]"></span>
     <button id="logoutBtn" class="text-xs bg-red-800/50 hover:bg-red-700 px-3 py-1.5 rounded-full"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </div>
 </nav>
@@ -165,29 +222,29 @@
   
   <!-- Continue Watching Section -->
   <section id="continueWatchingSection" class="mb-12">
-    <h2 class="text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
+    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
     <div id="continueWatchingContainer" class="horizontal-scroll">
       <div class="text-gray-400 text-sm">Log in to see your watch history.</div>
     </div>
   </section>
 
-  <!-- Player Panel -->
-  <div id="playerPanel" class="hidden mb-12 bg-gray-900/80 rounded-2xl p-5 border border-gray-700 shadow-2xl">
-    <div class="flex flex-col lg:flex-row gap-6">
-      <div class="lg:w-1/5">
-        <img id="detailPoster" class="w-full rounded-xl shadow-lg" src="https://placehold.co/300x450" alt="poster">
-        <div class="mt-3 text-sm space-y-1">
+  <!-- Player Panel (responsive layout) -->
+  <div id="playerPanel" class="hidden mb-12 bg-gray-900/80 rounded-2xl p-4 md:p-5 border border-gray-700 shadow-2xl">
+    <div class="flex flex-col md:flex-row gap-4 md:gap-6">
+      <div class="md:w-1/5 flex flex-col items-center md:items-start">
+        <img id="detailPoster" class="w-32 md:w-full rounded-xl shadow-lg" src="https://placehold.co/300x450" alt="poster">
+        <div class="mt-3 text-sm space-y-1 text-center md:text-left">
           <p><i class="fas fa-star text-yellow-400"></i> <span id="detailRating">—</span> / 10</p>
           <p><i class="fas fa-calendar"></i> <span id="detailYear">—</span></p>
-          <p><span id="detailType" class="capitalize bg-gray-800 px-2 py-0.5 rounded-full text-xs">—</span></p>
+          <p><span id="detailType" class="capitalize bg-gray-800/60 px-2 py-0.5 rounded-full text-xs">—</span></p>
         </div>
       </div>
       <div class="flex-1">
-        <div class="flex justify-between items-start">
-          <h2 id="detailTitle" class="text-2xl md:text-3xl font-bold"></h2>
-          <button id="closePlayerBtn" class="text-gray-400 hover:text-white text-xl">&times;</button>
+        <div class="flex justify-between items-start flex-wrap gap-2">
+          <h2 id="detailTitle" class="text-xl md:text-3xl font-bold break-words"></h2>
+          <button id="closePlayerBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
         </div>
-        <p id="detailOverview" class="text-gray-300 text-sm mt-2 line-clamp-3"></p>
+        <p id="detailOverview" class="text-gray-300 text-sm mt-2 line-clamp-3 leading-relaxed"></p>
         
         <!-- TV Controls -->
         <div id="tvControls" class="hidden mt-4">
@@ -203,8 +260,8 @@
 
         <div class="mt-4 space-y-3">
           <div class="flex flex-wrap gap-3 items-center">
-            <span class="text-sm">Source:</span>
-            <select id="sourceSelect" class="bg-gray-800 border border-gray-600 rounded-full px-3 py-1 text-sm"></select>
+            <span class="text-sm font-medium">Source:</span>
+            <select id="sourceSelect" class="bg-gray-800 border border-gray-600 rounded-full px-3 py-1 text-sm flex-1 min-w-[120px]"></select>
             <button id="reloadEmbedBtn" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full"><i class="fas fa-sync-alt"></i> Reload</button>
             <button id="orderSourcesBtn" class="text-xs bg-yellow-600 hover:bg-yellow-500 px-2 py-1 rounded-full" title="Reorder sources"><i class="fas fa-arrows-alt"></i></button>
           </div>
@@ -223,20 +280,15 @@
     </div>
   </div>
 
-  <!-- Trending Movies -->
+  <!-- Trending Movies & TV Shows (responsive grids) -->
   <section class="mb-12">
-    <h2 class="text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
-    <div id="trendingMoviesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-      <div class="animate-pulse bg-gray-800 rounded-xl h-64"></div>
-    </div>
+    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
+    <div id="trendingMoviesGrid" class="trending-grid"></div>
   </section>
 
-  <!-- Trending TV Shows -->
   <section class="mb-12">
-    <h2 class="text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-tv text-purple-400"></i> Trending TV Shows</h2>
-    <div id="trendingTvGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-      <div class="animate-pulse bg-gray-800 rounded-xl h-64"></div>
-    </div>
+    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-tv text-purple-400"></i> Trending TV Shows</h2>
+    <div id="trendingTvGrid" class="trending-grid"></div>
   </section>
 </main>
 
@@ -252,9 +304,9 @@
   </div>
 </div>
 
-<!-- Login/Signup Modals -->
+<!-- Login/Signup Modals (unchanged, just responsive) -->
 <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
-  <div class="bg-gray-900 rounded-2xl p-6 w-96 border border-yellow-500/30 relative">
+  <div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative">
     <h3 class="text-xl font-bold mb-4">Login</h3>
     <input type="email" id="loginEmail" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-3">
     <input type="password" id="loginPassword" placeholder="Password" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-4">
@@ -264,7 +316,7 @@
   </div>
 </div>
 <div id="signupModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
-  <div class="bg-gray-900 rounded-2xl p-6 w-96 border border-yellow-500/30 relative">
+  <div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative">
     <h3 class="text-xl font-bold mb-4">Create Account</h3>
     <input type="email" id="signupEmail" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-3">
     <input type="password" id="signupPassword" placeholder="Password (min 6)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-4">
@@ -276,7 +328,7 @@
 
 <script>
 (function() {
-  // ================= ALL SOURCES (30+ embed providers) =================
+  // ================= ALL SOURCES (30+ providers) =================
   const DEFAULT_SOURCES = [
     { name: '🎬 Vidsrc', url: (type, id, s, e) => type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
     { name: '📺 2Embed', url: (type, id, s, e) => type === 'movie' ? `https://2embed.sx/embed/movie?tmdb=${id}` : `https://2embed.sx/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
@@ -321,7 +373,7 @@
   let currentTVDetails = null;
   let currentEpisodesList = [];
 
-  // DOM elements
+  // DOM elements (same as before)
   const continueContainer = document.getElementById('continueWatchingContainer');
   const trendingMoviesGrid = document.getElementById('trendingMoviesGrid');
   const trendingTvGrid = document.getElementById('trendingTvGrid');
@@ -348,22 +400,28 @@
     container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>';
   }
 
-  // ================= SOURCE ORDER =================
+  // ================= SOURCE ORDER (safe loading) =================
   async function loadUserSourceOrder() {
     if (!currentUser) return;
-    const { data, error } = await sb.from('user_settings').select('source_order').eq('id', currentUser.id).maybeSingle();
-    if (!error && data && data.source_order && Array.isArray(data.source_order) && data.source_order.length === DEFAULT_SOURCES.length) {
-      const newOrder = [];
-      for (const savedName of data.source_order) {
-        const found = DEFAULT_SOURCES.find(s => s.name === savedName);
-        if (found) newOrder.push({ name: found.name, url: found.url });
-      }
-      if (newOrder.length === DEFAULT_SOURCES.length) {
-        EMBED_SOURCES = newOrder;
+    try {
+      const { data, error } = await sb.from('user_settings').select('source_order').eq('id', currentUser.id).maybeSingle();
+      if (!error && data && data.source_order && Array.isArray(data.source_order)) {
+        const newOrder = [];
+        for (const savedName of data.source_order) {
+          const found = DEFAULT_SOURCES.find(s => s.name === savedName);
+          if (found) newOrder.push({ name: found.name, url: found.url });
+        }
+        if (newOrder.length === data.source_order.length && newOrder.length > 0) {
+          EMBED_SOURCES = newOrder;
+        } else {
+          EMBED_SOURCES = [...DEFAULT_SOURCES];
+          await sb.from('user_settings').upsert({ id: currentUser.id, source_order: DEFAULT_SOURCES.map(s => s.name), updated_at: new Date().toISOString() });
+        }
       } else {
         EMBED_SOURCES = [...DEFAULT_SOURCES];
       }
-    } else {
+    } catch (err) {
+      console.error("Failed to load source order", err);
       EMBED_SOURCES = [...DEFAULT_SOURCES];
     }
     populateSources();
@@ -403,7 +461,7 @@
     else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to generate URL</div>';
   }
 
-  // ================= DATABASE =================
+  // ================= DATABASE FUNCTIONS (unchanged) =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -426,7 +484,6 @@
       .from('watch_history')
       .upsert(record, { onConflict: 'user_id, media_type, tmdb_id' });
     if (error) console.error("Save error:", error);
-    else console.log("Saved:", currentProgressMinutes, "min, ep", episode);
   }
 
   async function loadProgress() {
@@ -485,7 +542,7 @@
       const poster = item.poster_path ? IMG_BASE + item.poster_path : 'https://placehold.co/300x450';
       const card = document.createElement('div');
       card.className = 'movie-card relative';
-      card.style.flex = '0 0 160px';
+      card.style.flex = '0 0 140px';
       const progressPercent = Math.min((item.progress_minutes / 120) * 100, 100);
       let label = item.media_type === 'tv' ? `S${item.season_number}E${item.episode_number}` : 'Movie';
       card.innerHTML = `
@@ -524,7 +581,7 @@
     }
   }
 
-  // ================= TV EPISODE NAVIGATION =================
+  // ================= TV EPISODE NAVIGATION (unchanged) =================
   async function updateEpisodeNavigation() {
     if (!currentMedia || currentMedia.type !== 'tv' || !currentEpisodesList.length) {
       prevEpisodeBtn.disabled = true;
@@ -562,7 +619,6 @@
     }
   }
 
-  // ================= TV HELPERS =================
   async function loadTVSeasons(tvId, preserveEpisode = false, forcedSeason = null, forcedEpisode = null) {
     const res = await fetchWithRetry(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}`);
     const data = await res.json();
@@ -616,7 +672,6 @@
     updateEpisodeNavigation();
   }
 
-  // ================= FETCH WITH RETRY =================
   async function fetchWithRetry(url, retries = 3, delay = 1000) {
     for (let i = 0; i < retries; i++) {
       try {
@@ -635,7 +690,6 @@
     }
   }
 
-  // ================= SHOW DETAILS =================
   async function showDetails(item, type, savedProgress = null, savedSeason = null, savedEpisode = null) {
     playerPanel.classList.remove('hidden');
     const title = item.title || item.name;
@@ -676,7 +730,6 @@
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // ================= RENDER CARDS =================
   function renderCards(container, items, mediaType) {
     if (!items.length) {
       container.innerHTML = '<div class="col-span-full text-center text-gray-400">No results</div>';
@@ -754,7 +807,6 @@
     }
   }
 
-  // ================= AUTH UI =================
   function updateAuthUI() {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       currentUser = user;
