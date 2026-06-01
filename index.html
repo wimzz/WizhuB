@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • Auto-Resume & Continue Watching</title>
+  <title>WizhuB • Auto‑Add to Continue Watching</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -125,9 +125,8 @@
             <span class="text-sm"><i class="fas fa-clock"></i> Watched (minutes):</span>
             <input type="number" id="progressMinutes" value="0" step="1" min="0" class="w-24 bg-gray-800 border border-gray-600 rounded-full px-3 py-1 text-sm">
             <button id="saveProgressBtn" class="text-xs bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-full"><i class="fas fa-save"></i> Save Time</button>
-            <span id="saveFeedback" class="text-green-400 text-xs hidden">✓ Saved</span>
           </div>
-          <p class="text-xs text-gray-400">⚠️ Enter the minutes you have watched (e.g., 30). When you resume on another server, the video will start at that time.</p>
+          <p class="text-xs text-gray-400">Enter the minutes you have watched (e.g., 30). When you resume on another server, the video will start at that time.</p>
         </div>
 
         <div class="embed-container mt-3">
@@ -253,6 +252,43 @@
     else embedIframe.srcdoc = '<div style="padding:2rem;color:red">Source unavailable</div>';
   }
 
+  // Automatically add to watch history (with 0 minutes) if not exists
+  async function ensureWatchHistoryEntry() {
+    if (!currentUser || !currentMedia) return;
+    // Check if entry exists
+    let query = sb.from('watch_history').select('id')
+      .eq('user_id', currentUser.id)
+      .eq('media_type', currentMedia.type)
+      .eq('tmdb_id', currentMedia.id);
+    if (currentMedia.type === 'tv') {
+      query = query.eq('season_number', currentSeason).eq('episode_number', currentEpisode);
+    } else {
+      query = query.is('season_number', null).is('episode_number', null);
+    }
+    const { data } = await query.maybeSingle();
+    if (!data) {
+      // Create entry with 0 minutes
+      const record = {
+        user_id: currentUser.id,
+        media_type: currentMedia.type,
+        tmdb_id: currentMedia.id,
+        title: currentMedia.title,
+        poster_path: currentMedia.posterPath,
+        media_year: currentMedia.year,
+        rating: currentMedia.rating,
+        progress_minutes: 0,
+        last_watched: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      if (currentMedia.type === 'tv') {
+        record.season_number = currentSeason;
+        record.episode_number = currentEpisode;
+      }
+      await sb.from('watch_history').upsert(record);
+      renderContinueWatching(); // update UI immediately
+    }
+  }
+
   async function saveProgressToDB() {
     if (!currentUser) { alert('Please login first'); return; }
     if (!currentMedia) return;
@@ -278,6 +314,7 @@
       .upsert(record, { onConflict: 'user_id, media_type, tmdb_id, season_number, episode_number' });
     if (error) alert('Save error: ' + error.message);
     else {
+      currentProgressMinutes = minutes;
       renderContinueWatching();
     }
   }
@@ -324,7 +361,6 @@
       const card = document.createElement('div');
       card.className = 'movie-card relative';
       card.style.flex = '0 0 160px';
-      // rough progress % for visual bar (assuming 120 min movie)
       const progressPercent = Math.min((item.progress_minutes / 120) * 100, 100);
       card.innerHTML = `
         <img src="${poster}" class="w-full h-64 object-cover" loading="lazy">
@@ -380,11 +416,13 @@
       await loadEpisodes(tvId, currentSeason);
       await loadProgress();
       updateEmbedStream();
+      await ensureWatchHistoryEntry(); // ensure entry exists for new season
     };
     episodeSelect.onchange = async () => {
       currentEpisode = parseInt(episodeSelect.value);
       await loadProgress();
       updateEmbedStream();
+      await ensureWatchHistoryEntry();
     };
   }
 
@@ -426,6 +464,8 @@
       tvControlsDiv.classList.add('hidden');
     }
     await loadProgress();
+    // Auto-add to continue watching if not already present
+    await ensureWatchHistoryEntry();
     updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
