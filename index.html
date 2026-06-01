@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WizhuB • All Sources • Responsive</title>
+  <title>WizhuB • All 26 Sources (Fixed)</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -162,25 +162,16 @@
     @media (min-width: 1024px) { .trending-grid { grid-template-columns: repeat(5, 1fr); } }
     @media (min-width: 1280px) { .trending-grid { grid-template-columns: repeat(6, 1fr); } }
     @media (max-width: 768px) {
-      .player-panel .detail-poster {
-        width: 120px;
-        margin: 0 auto;
-      }
-      .player-panel .flex-col {
-        flex-direction: column;
-      }
-      .glass-nav .flex-1 {
-        order: 3;
-        width: 100%;
-        margin-top: 0.5rem;
-      }
+      .player-panel .detail-poster { width: 120px; margin: 0 auto; }
+      .player-panel .flex-col { flex-direction: column; }
+      .glass-nav .flex-1 { order: 3; width: 100%; margin-top: 0.5rem; }
     }
     input, select, button { font-size: 16px; }
   </style>
 </head>
 <body class="text-gray-200">
 
-<!-- Navigation -->
+<!-- Navigation (identical to previous working version) -->
 <nav class="glass-nav">
   <div class="flex items-center gap-2">
     <i class="fas fa-crown text-2xl md:text-3xl text-yellow-400"></i>
@@ -201,12 +192,9 @@
 </nav>
 
 <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
-  
   <section id="continueWatchingSection" class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
-    <div id="continueWatchingContainer" class="horizontal-scroll">
-      <div class="text-gray-400 text-sm">Log in to see your watch history.</div>
-    </div>
+    <div id="continueWatchingContainer" class="horizontal-scroll"><div class="text-gray-400 text-sm">Log in to see your watch history.</div></div>
   </section>
 
   <div id="playerPanel" class="hidden mb-12 bg-gray-900/80 rounded-2xl p-4 md:p-5 border border-gray-700 shadow-2xl">
@@ -225,7 +213,6 @@
           <button id="closePlayerBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
         </div>
         <p id="detailOverview" class="text-gray-300 text-sm mt-2 line-clamp-3 leading-relaxed"></p>
-        
         <div id="tvControls" class="hidden mt-4">
           <div class="flex flex-wrap gap-3 items-center">
             <select id="seasonSelect" class="bg-gray-800 border border-gray-600 rounded-full px-3 py-1 text-sm"></select>
@@ -236,7 +223,6 @@
             </div>
           </div>
         </div>
-
         <div class="mt-4 space-y-3">
           <div class="flex flex-wrap gap-3 items-center">
             <span class="text-sm font-medium">Source:</span>
@@ -250,7 +236,6 @@
             <button id="saveProgressBtn" class="text-xs bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-full"><i class="fas fa-save"></i> Save Time</button>
           </div>
         </div>
-
         <div class="embed-container mt-3">
           <iframe id="embedIframe" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
         </div>
@@ -263,7 +248,6 @@
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
     <div id="trendingMoviesGrid" class="trending-grid"></div>
   </section>
-
   <section class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-tv text-purple-400"></i> Trending TV Shows</h2>
     <div id="trendingTvGrid" class="trending-grid"></div>
@@ -304,7 +288,7 @@
 
 <script>
 (function() {
-  // ================= ALL SOURCES (30+ providers) =================
+  // ================= ALL SOURCES (26 providers) =================
   const DEFAULT_SOURCES = [
     { name: '🎬 Vidsrc', url: (type, id, s, e) => type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
     { name: '📺 2Embed', url: (type, id, s, e) => type === 'movie' ? `https://2embed.sx/embed/movie?tmdb=${id}` : `https://2embed.sx/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
@@ -376,34 +360,19 @@
     container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>';
   }
 
-  // ================= SOURCE ORDER (always start with all sources) =================
+  // ================= SOURCE ORDER LOADING (FIXED) =================
   async function loadUserSourceOrder() {
-    if (!currentUser) {
-      // Not logged in, use defaults
-      EMBED_SOURCES = [...DEFAULT_SOURCES];
-      populateSources();
-      return;
-    }
+    if (!currentUser) return;
     try {
       const { data, error } = await sb.from('user_settings').select('source_order').eq('id', currentUser.id).maybeSingle();
-      if (!error && data && data.source_order && Array.isArray(data.source_order) && data.source_order.length === DEFAULT_SOURCES.length) {
-        // Check if all names match exactly
-        const savedNames = data.source_order;
-        const defaultNames = DEFAULT_SOURCES.map(s => s.name);
-        let matches = true;
-        for (let i = 0; i < savedNames.length; i++) {
-          if (savedNames[i] !== defaultNames[i]) {
-            matches = false;
-            break;
-          }
-        }
-        if (matches) {
-          // Exactly the default order, just keep defaults
+      if (!error && data && data.source_order && Array.isArray(data.source_order)) {
+        if (data.source_order.length !== DEFAULT_SOURCES.length) {
+          // Length mismatch – reset to full list
           EMBED_SOURCES = [...DEFAULT_SOURCES];
+          await sb.from('user_settings').upsert({ id: currentUser.id, source_order: DEFAULT_SOURCES.map(s => s.name), updated_at: new Date().toISOString() });
         } else {
-          // Reorder based on saved order
           const newOrder = [];
-          for (const savedName of savedNames) {
+          for (const savedName of data.source_order) {
             const found = DEFAULT_SOURCES.find(s => s.name === savedName);
             if (found) newOrder.push({ name: found.name, url: found.url });
           }
@@ -411,16 +380,14 @@
             EMBED_SOURCES = newOrder;
           } else {
             EMBED_SOURCES = [...DEFAULT_SOURCES];
+            await sb.from('user_settings').upsert({ id: currentUser.id, source_order: DEFAULT_SOURCES.map(s => s.name), updated_at: new Date().toISOString() });
           }
         }
       } else {
-        // No saved order or invalid, use defaults
         EMBED_SOURCES = [...DEFAULT_SOURCES];
-        // Optionally save the default order to DB for this user
-        await sb.from('user_settings').upsert({ id: currentUser.id, source_order: DEFAULT_SOURCES.map(s => s.name), updated_at: new Date().toISOString() });
       }
     } catch (err) {
-      console.error("Failed to load source order", err);
+      console.error(err);
       EMBED_SOURCES = [...DEFAULT_SOURCES];
     }
     populateSources();
@@ -440,7 +407,7 @@
       opt.textContent = src.name;
       sourceSelect.appendChild(opt);
     });
-    console.log(`Populated ${EMBED_SOURCES.length} sources`); // Debug
+    console.log(`✅ Sources loaded: ${EMBED_SOURCES.length}`);
   }
 
   function updateEmbedStream() {
@@ -461,7 +428,7 @@
     else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to generate URL</div>';
   }
 
-  // ================= DATABASE FUNCTIONS (identical as before) =================
+  // ================= DATABASE FUNCTIONS (unchanged, copy from previous working version) =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -824,6 +791,7 @@
     }).catch(console.error);
   }
 
+  // ================= SOURCE ORDER MODAL =================
   function openOrderModal() {
     sourceListDiv.innerHTML = '';
     EMBED_SOURCES.forEach((src, idx) => {
@@ -872,6 +840,7 @@
   closeOrderBtn.onclick = () => orderModal.style.display = 'none';
   orderSourcesBtn.onclick = openOrderModal;
 
+  // ================= EVENT LISTENERS =================
   closePlayerBtn.onclick = () => playerPanel.classList.add('hidden');
   reloadEmbedBtn.onclick = () => updateEmbedStream();
   sourceSelect.onchange = () => updateEmbedStream();
@@ -889,6 +858,7 @@
     searchTimeout = setTimeout(() => search(e.target.value), 500);
   });
 
+  // ================= LOGIN/SIGNUP MODALS =================
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
@@ -920,6 +890,7 @@
     playerPanel.classList.add('hidden');
   };
 
+  // ================= INIT =================
   populateSources();
   fetchTrending();
   updateAuthUI();
