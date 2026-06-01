@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • Episode Updates & Sortable Sources</title>
+  <title>WizhuB • Latest Episode in Continue Watching</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -386,8 +386,8 @@
       .upsert(record, { onConflict: 'user_id, media_type, tmdb_id' });
     if (error) console.error("Save error:", error);
     else {
-      console.log("Saved:", currentProgressMinutes, "min for", currentMedia.title);
-      renderContinueWatching(); // refresh the list after save/episode change
+      console.log("Saved:", currentProgressMinutes, "min for", currentMedia.title, `S${season}E${episode}`);
+      await renderContinueWatching(); // ← refresh immediately
     }
   }
 
@@ -517,8 +517,8 @@
       await loadProgress();
       updateEmbedStream();
       updateEpisodeNavigation();
-      await saveProgressToDB();  // saves the new episode number
-      renderContinueWatching();  // update card immediately
+      await saveProgressToDB();  // saves the updated episode number and progress
+      // Continue Watching is refreshed inside saveProgressToDB
     }
   }
 
@@ -532,7 +532,6 @@
       updateEmbedStream();
       updateEpisodeNavigation();
       await saveProgressToDB();
-      renderContinueWatching();
     }
   }
 
@@ -561,7 +560,6 @@
       updateEmbedStream();
       updateEpisodeNavigation();
       await saveProgressToDB();
-      renderContinueWatching();
     };
     episodeSelect.onchange = async () => {
       currentEpisode = parseInt(episodeSelect.value);
@@ -569,7 +567,6 @@
       updateEmbedStream();
       updateEpisodeNavigation();
       await saveProgressToDB();
-      renderContinueWatching();
     };
     updateEpisodeNavigation();
   }
@@ -636,7 +633,7 @@
       tvControlsDiv.classList.add('hidden');
     }
     await loadProgress();
-    await saveProgressToDB();
+    await saveProgressToDB();  // ensures a row exists with latest episode info
     updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
