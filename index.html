@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WizhuB • Redesigned Player</title>
+  <title>WizhuB • Video First Layout</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -132,29 +132,47 @@
     @media (min-width: 1280px) { .trending-grid { grid-template-columns: repeat(6, 1fr); } }
     input, select, button { font-size: 16px; }
 
-    /* ===== REDESIGNED PLAYER PANEL STYLES ===== */
+    /* ===== REDESIGNED PLAYER PANEL (VIDEO FIRST) ===== */
     .player-modern {
       background: linear-gradient(145deg, #101218, #0b0d12);
       border-radius: 1.5rem;
       border: 1px solid rgba(250, 204, 21, 0.15);
-      box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+      box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
       overflow: hidden;
     }
-    .player-modern .poster-wrapper {
-      position: relative;
+    .info-section {
+      padding: 1.5rem;
+    }
+    /* Poster & info row – on desktop side by side, on mobile stacked */
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    @media (min-width: 768px) {
+      .info-row {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+      .poster-col {
+        flex: 0 0 140px;
+      }
+      .details-col {
+        flex: 1;
+      }
+    }
+    .poster-wrapper {
       border-radius: 1rem;
       overflow: hidden;
       background: #07090e;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
     }
-    .player-modern .poster-wrapper img {
+    .poster-wrapper img {
       width: 100%;
       height: auto;
-      transition: transform 0.3s ease;
+      display: block;
     }
-    .player-modern .poster-wrapper:hover img {
-      transform: scale(1.02);
-    }
-    .player-modern .rating-badge {
+    .rating-badge {
       background: rgba(0,0,0,0.6);
       backdrop-filter: blur(4px);
       padding: 4px 10px;
@@ -165,7 +183,7 @@
       align-items: center;
       gap: 6px;
     }
-    .player-modern .type-badge {
+    .type-badge {
       background: #facc1522;
       border: 1px solid #facc1544;
       padding: 2px 10px;
@@ -174,7 +192,7 @@
       text-transform: uppercase;
       font-weight: 500;
     }
-    .player-modern .overview-text {
+    .overview-text {
       color: #b0b8cc;
       line-height: 1.5;
       font-size: 0.9rem;
@@ -182,7 +200,7 @@
     .control-group {
       background: rgba(0,0,0,0.3);
       border-radius: 1rem;
-      padding: 0.5rem;
+      padding: 0.75rem;
     }
     .select-modern {
       background: #1a1d24;
@@ -241,6 +259,7 @@
     .episode-nav-modern {
       display: flex;
       gap: 0.8rem;
+      flex-wrap: wrap;
     }
     .episode-nav-modern button {
       background: #1e212b;
@@ -259,12 +278,8 @@
       cursor: not-allowed;
     }
     @media (max-width: 768px) {
-      .player-modern .flex-col {
-        flex-direction: column;
-      }
-      .player-modern .poster-wrapper {
-        max-width: 180px;
-        margin: 0 auto;
+      .info-section {
+        padding: 1rem;
       }
       .control-group .flex-wrap {
         justify-content: center;
@@ -319,73 +334,74 @@
     <div id="continueWatchingContainer" class="horizontal-scroll"><div class="text-gray-400 text-sm">Log in to see your watch history.</div></div>
   </section>
 
-  <!-- ================= REDESIGNED PLAYER PANEL ================= -->
+  <!-- ================= REDESIGNED PLAYER PANEL (VIDEO FIRST) ================= -->
   <div id="playerPanel" class="hidden mb-12 player-modern">
-    <div class="flex flex-col md:flex-row gap-6 p-4 md:p-6">
-      <!-- Left Column: Poster + meta -->
-      <div class="md:w-1/4 xl:w-1/5">
-        <div class="poster-wrapper rounded-xl shadow-2xl">
-          <img id="detailPoster" class="w-full rounded-xl" src="https://placehold.co/300x450" alt="poster">
-        </div>
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <div class="rating-badge">
-            <i class="fas fa-star text-yellow-400 text-xs"></i>
-            <span id="detailRating" class="font-semibold">—</span>
-            <span class="text-gray-400 text-xs">/10</span>
+    <!-- Video embed at the top -->
+    <div class="embed-container">
+      <iframe id="embedIframe" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
+    </div>
+
+    <!-- Info section below video -->
+    <div class="info-section">
+      <div class="info-row">
+        <!-- Poster column -->
+        <div class="poster-col">
+          <div class="poster-wrapper rounded-xl shadow-lg">
+            <img id="detailPoster" src="https://placehold.co/300x450" alt="poster">
           </div>
-          <div class="flex gap-3 text-sm">
-            <span><i class="fas fa-calendar-alt text-gray-400 mr-1"></i><span id="detailYear">—</span></span>
+        </div>
+
+        <!-- Details column -->
+        <div class="details-col">
+          <div class="flex justify-between items-start flex-wrap gap-2">
+            <h2 id="detailTitle" class="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"></h2>
+            <button id="closePlayerBtn" class="text-gray-400 hover:text-white text-xl">&times;</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 mt-2">
+            <div class="rating-badge">
+              <i class="fas fa-star text-yellow-400 text-xs"></i>
+              <span id="detailRating" class="font-semibold">—</span>
+              <span class="text-gray-400 text-xs">/10</span>
+            </div>
+            <span class="text-sm"><i class="fas fa-calendar-alt text-gray-400 mr-1"></i><span id="detailYear">—</span></span>
             <span class="type-badge" id="detailType">—</span>
           </div>
-        </div>
-      </div>
+          <p id="detailOverview" class="overview-text mt-3 text-sm md:text-base leading-relaxed"></p>
 
-      <!-- Right Column: Title, Overview, Controls, Embed -->
-      <div class="flex-1">
-        <div class="flex justify-between items-start flex-wrap gap-3">
-          <h2 id="detailTitle" class="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"></h2>
-          <button id="closePlayerBtn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-        </div>
-        <p id="detailOverview" class="overview-text mt-3 text-sm md:text-base leading-relaxed"></p>
-        
-        <!-- TV Controls (Episode selector + navigation) -->
-        <div id="tvControls" class="hidden mt-5">
-          <div class="control-group flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap gap-3 items-center">
-              <select id="seasonSelect" class="select-modern"></select>
-              <select id="episodeSelect" class="select-modern"></select>
-            </div>
-            <div class="episode-nav-modern">
-              <button id="prevEpisodeBtn" class="text-sm" disabled><i class="fas fa-step-backward"></i> Previous</button>
-              <button id="nextEpisodeBtn" class="text-sm" disabled>Next <i class="fas fa-step-forward"></i></button>
+          <!-- TV Controls (episode selector + navigation) -->
+          <div id="tvControls" class="hidden mt-4">
+            <div class="control-group flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-wrap gap-3 items-center">
+                <select id="seasonSelect" class="select-modern"></select>
+                <select id="episodeSelect" class="select-modern"></select>
+              </div>
+              <div class="episode-nav-modern">
+                <button id="prevEpisodeBtn" class="text-sm" disabled><i class="fas fa-step-backward"></i> Previous</button>
+                <button id="nextEpisodeBtn" class="text-sm" disabled>Next <i class="fas fa-step-forward"></i></button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Source & Playback Controls -->
-        <div class="mt-5 space-y-4">
-          <div class="control-group flex flex-wrap items-center gap-2">
-            <span class="text-sm font-medium text-gray-300">Source:</span>
-            <select id="sourceSelect" class="select-modern flex-1 min-w-[130px]"></select>
-            <div class="flex flex-wrap gap-2">
-              <button id="reloadEmbedBtn" class="btn-icon"><i class="fas fa-sync-alt"></i> Reload</button>
-              <button id="nextSourceBtn" class="btn-icon"><i class="fas fa-forward"></i> Next</button>
-              <button id="copyUrlBtn" class="btn-icon"><i class="fas fa-copy"></i> Copy URL</button>
-              <button id="orderSourcesBtn" class="btn-icon" title="Reorder sources"><i class="fas fa-arrows-alt"></i> Order</button>
+          <!-- Source & Playback Controls -->
+          <div class="mt-5 space-y-3">
+            <div class="control-group flex flex-wrap items-center gap-2">
+              <span class="text-sm font-medium text-gray-300">Source:</span>
+              <select id="sourceSelect" class="select-modern flex-1 min-w-[130px]"></select>
+              <div class="flex flex-wrap gap-2">
+                <button id="reloadEmbedBtn" class="btn-icon"><i class="fas fa-sync-alt"></i> Reload</button>
+                <button id="nextSourceBtn" class="btn-icon"><i class="fas fa-forward"></i> Next</button>
+                <button id="copyUrlBtn" class="btn-icon"><i class="fas fa-copy"></i> Copy URL</button>
+                <button id="orderSourcesBtn" class="btn-icon" title="Reorder sources"><i class="fas fa-arrows-alt"></i> Order</button>
+              </div>
+            </div>
+            
+            <div class="control-group flex flex-wrap items-center gap-4">
+              <span class="text-sm"><i class="fas fa-clock text-yellow-400"></i> Watched (minutes):</span>
+              <input type="number" id="progressMinutes" value="0" step="1" min="0" class="progress-input">
+              <button id="saveProgressBtn" class="btn-primary"><i class="fas fa-save"></i> Save Time</button>
             </div>
           </div>
-          
-          <div class="control-group flex flex-wrap items-center gap-4">
-            <span class="text-sm"><i class="fas fa-clock text-yellow-400"></i> Watched (minutes):</span>
-            <input type="number" id="progressMinutes" value="0" step="1" min="0" class="progress-input">
-            <button id="saveProgressBtn" class="btn-primary"><i class="fas fa-save"></i> Save Time</button>
-          </div>
         </div>
-
-        <div class="embed-container mt-4">
-          <iframe id="embedIframe" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
-        </div>
-        <p class="text-[10px] text-gray-500 text-center mt-3">If video doesn't load, try another source.</p>
       </div>
     </div>
   </div>
@@ -479,7 +495,7 @@
   let currentTVDetails = null;
   let currentEpisodesList = [];
 
-  // DOM elements
+  // DOM elements (all IDs preserved)
   const continueContainer = document.getElementById('continueWatchingContainer');
   const trendingMoviesGrid = document.getElementById('trendingMoviesGrid');
   const trendingTvGrid = document.getElementById('trendingTvGrid');
