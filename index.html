@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • Working Video</title>
+  <title>WizhuB • Stable Version (Source Order + Resume)</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -75,6 +75,32 @@
     }
     .horizontal-scroll .movie-card {
       flex: 0 0 160px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal-content {
+      background: #1e1f2c;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 400px;
+    }
+    .source-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      background: #2a2c38;
+      margin-bottom: 0.5rem;
+      border-radius: 0.5rem;
     }
     .episode-nav {
       display: flex;
@@ -180,6 +206,7 @@
             <span class="text-sm">Source:</span>
             <select id="sourceSelect" class="bg-gray-800 border border-gray-600 rounded-full px-3 py-1 text-sm"></select>
             <button id="reloadEmbedBtn" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full"><i class="fas fa-sync-alt"></i> Reload</button>
+            <button id="orderSourcesBtn" class="text-xs bg-yellow-600 hover:bg-yellow-500 px-2 py-1 rounded-full" title="Reorder sources"><i class="fas fa-arrows-alt"></i></button>
           </div>
           <div class="flex flex-wrap items-center gap-4 bg-black/30 p-3 rounded-xl">
             <span class="text-sm"><i class="fas fa-clock"></i> Watched (minutes):</span>
@@ -213,6 +240,18 @@
   </section>
 </main>
 
+<!-- Source Order Modal -->
+<div id="orderModal" class="modal">
+  <div class="modal-content">
+    <h3 class="text-xl font-bold mb-4">Reorder Stream Sources</h3>
+    <div id="sourceList" class="mb-4"></div>
+    <div class="flex gap-2">
+      <button id="saveOrderBtn" class="bg-green-600 px-4 py-2 rounded-full">Save Order</button>
+      <button id="closeOrderBtn" class="bg-gray-600 px-4 py-2 rounded-full">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Login/Signup Modals -->
 <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
   <div class="bg-gray-900 rounded-2xl p-6 w-96 border border-yellow-500/30 relative">
@@ -237,8 +276,8 @@
 
 <script>
 (function() {
-  // ================= SOURCES (hardcoded, no DB save) =================
-  const EMBED_SOURCES = [
+  // ================= SOURCES WITH URL FUNCTIONS =================
+  const DEFAULT_SOURCES = [
     { name: '🎬 Vidsrc', url: (type, id, s, e) => type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
     { name: '📺 2Embed', url: (type, id, s, e) => type === 'movie' ? `https://2embed.sx/embed/movie?tmdb=${id}` : `https://2embed.sx/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
     { name: '🌀 Embed.su', url: (type, id, s, e) => type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${s}/${e}` },
@@ -247,6 +286,8 @@
     { name: '📀 VidUp', url: (type, id, s, e) => type === 'movie' ? `https://vidup.to/movie/${id}` : `https://vidup.to/tv/${id}/${s}/${e}` },
     { name: '🎞️ VAPlayer', url: (type, id, s, e) => type === 'movie' ? `https://vaplayer.ru/embed/movie/${id}` : `https://vaplayer.ru/embed/tv/${id}/${s}/${e}` }
   ];
+
+  let EMBED_SOURCES = [...DEFAULT_SOURCES];
 
   const SUPABASE_URL = 'https://evhtzfkxolnlqlmjewew.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHR6Zmt4b2xubHFsbWpld2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMzOTUsImV4cCI6MjA5NTg2OTM5NX0.42bpsGRyKSZcQ3EUj1k3grsUVuXtZWKsce7OKv8J5YU';
@@ -278,9 +319,42 @@
   const saveProgressBtn = document.getElementById('saveProgressBtn');
   const reloadEmbedBtn = document.getElementById('reloadEmbedBtn');
   const globalSearch = document.getElementById('globalSearch');
+  const orderModal = document.getElementById('orderModal');
+  const sourceListDiv = document.getElementById('sourceList');
+  const saveOrderBtn = document.getElementById('saveOrderBtn');
+  const closeOrderBtn = document.getElementById('closeOrderBtn');
+  const orderSourcesBtn = document.getElementById('orderSourcesBtn');
 
   function showLoading(container) {
     container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>';
+  }
+
+  // ================= SOURCE ORDER =================
+  async function loadUserSourceOrder() {
+    if (!currentUser) return;
+    const { data, error } = await sb.from('user_settings').select('source_order').eq('id', currentUser.id).maybeSingle();
+    if (!error && data && data.source_order && Array.isArray(data.source_order) && data.source_order.length === DEFAULT_SOURCES.length) {
+      // Rebuild EMBED_SOURCES by matching names to DEFAULT_SOURCES
+      const newOrder = [];
+      for (const savedName of data.source_order) {
+        const found = DEFAULT_SOURCES.find(s => s.name === savedName);
+        if (found) newOrder.push({ name: found.name, url: found.url });
+      }
+      if (newOrder.length === DEFAULT_SOURCES.length) {
+        EMBED_SOURCES = newOrder;
+      } else {
+        EMBED_SOURCES = [...DEFAULT_SOURCES];
+      }
+    } else {
+      EMBED_SOURCES = [...DEFAULT_SOURCES];
+    }
+    populateSources();
+  }
+
+  async function saveUserSourceOrder() {
+    if (!currentUser) return;
+    const namesOnly = EMBED_SOURCES.map(s => s.name);
+    await sb.from('user_settings').upsert({ id: currentUser.id, source_order: namesOnly, updated_at: new Date().toISOString() });
   }
 
   function populateSources() {
@@ -298,7 +372,6 @@
     const srcIdx = parseInt(sourceSelect.value);
     const src = EMBED_SOURCES[srcIdx];
     if (!src || typeof src.url !== 'function') {
-      console.error('Invalid source');
       embedIframe.srcdoc = '<div style="color:red;padding:2rem">Invalid source</div>';
       return;
     }
@@ -308,11 +381,11 @@
     } else {
       url = src.url('tv', currentMedia.id, currentSeason, currentEpisode);
     }
-    console.log('Loading URL:', url);
     if (url) embedIframe.src = url;
     else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to generate URL</div>';
   }
 
+  // ================= DATABASE =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -433,6 +506,7 @@
     }
   }
 
+  // ================= TV EPISODE NAVIGATION =================
   async function updateEpisodeNavigation() {
     if (!currentMedia || currentMedia.type !== 'tv' || !currentEpisodesList.length) {
       prevEpisodeBtn.disabled = true;
@@ -470,6 +544,7 @@
     }
   }
 
+  // ================= TV HELPERS =================
   async function loadTVSeasons(tvId, preserveEpisode = false, forcedSeason = null, forcedEpisode = null) {
     const res = await fetchWithRetry(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}`);
     const data = await res.json();
@@ -523,6 +598,7 @@
     updateEpisodeNavigation();
   }
 
+  // ================= FETCH WITH RETRY =================
   async function fetchWithRetry(url, retries = 3, delay = 1000) {
     for (let i = 0; i < retries; i++) {
       try {
@@ -541,6 +617,7 @@
     }
   }
 
+  // ================= SHOW DETAILS =================
   async function showDetails(item, type, savedProgress = null, savedSeason = null, savedEpisode = null) {
     playerPanel.classList.remove('hidden');
     const title = item.title || item.name;
@@ -581,6 +658,7 @@
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // ================= RENDER CARDS =================
   function renderCards(container, items, mediaType) {
     if (!items.length) {
       container.innerHTML = '<div class="col-span-full text-center text-gray-400">No results</div>';
@@ -658,6 +736,7 @@
     }
   }
 
+  // ================= AUTH UI =================
   function updateAuthUI() {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       currentUser = user;
@@ -665,6 +744,7 @@
         document.getElementById('authContainer').classList.add('hidden');
         document.getElementById('userContainer').classList.remove('hidden');
         document.getElementById('userEmailDisplay').innerText = user.email;
+        await loadUserSourceOrder();
         await renderContinueWatching();
       } else {
         document.getElementById('authContainer').classList.remove('hidden');
@@ -674,6 +754,55 @@
       }
     }).catch(console.error);
   }
+
+  // ================= SOURCE ORDER MODAL =================
+  function openOrderModal() {
+    sourceListDiv.innerHTML = '';
+    EMBED_SOURCES.forEach((src, idx) => {
+      const div = document.createElement('div');
+      div.className = 'source-item';
+      div.innerHTML = `
+        <span>${src.name}</span>
+        <div>
+          <button class="move-up text-yellow-400 mr-2" data-idx="${idx}"><i class="fas fa-arrow-up"></i></button>
+          <button class="move-down text-yellow-400" data-idx="${idx}"><i class="fas fa-arrow-down"></i></button>
+        </div>
+      `;
+      sourceListDiv.appendChild(div);
+    });
+    document.querySelectorAll('.move-up').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(btn.dataset.idx);
+        if (idx > 0) {
+          [EMBED_SOURCES[idx-1], EMBED_SOURCES[idx]] = [EMBED_SOURCES[idx], EMBED_SOURCES[idx-1]];
+          openOrderModal();
+        }
+      });
+    });
+    document.querySelectorAll('.move-down').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(btn.dataset.idx);
+        if (idx < EMBED_SOURCES.length - 1) {
+          [EMBED_SOURCES[idx], EMBED_SOURCES[idx+1]] = [EMBED_SOURCES[idx+1], EMBED_SOURCES[idx]];
+          openOrderModal();
+        }
+      });
+    });
+    orderModal.style.display = 'flex';
+  }
+
+  saveOrderBtn.onclick = async () => {
+    await saveUserSourceOrder();
+    populateSources();
+    orderModal.style.display = 'none';
+    if (sourceSelect.options.length) {
+      const oldIdx = parseInt(sourceSelect.value);
+      if (oldIdx >= EMBED_SOURCES.length) sourceSelect.value = 0;
+      updateEmbedStream();
+    }
+  };
+  closeOrderBtn.onclick = () => orderModal.style.display = 'none';
+  orderSourcesBtn.onclick = openOrderModal;
 
   // ================= EVENT LISTENERS =================
   closePlayerBtn.onclick = () => playerPanel.classList.add('hidden');
@@ -701,6 +830,7 @@
   document.querySelectorAll('.closeModal').forEach(btn => btn.onclick = () => {
     loginModal.classList.add('hidden');
     signupModal.classList.add('hidden');
+    orderModal.style.display = 'none';
   });
   document.getElementById('switchToSignupModal').onclick = () => { loginModal.classList.add('hidden'); signupModal.classList.remove('hidden'); };
   document.getElementById('switchToLoginModal').onclick = () => { signupModal.classList.add('hidden'); loginModal.classList.remove('hidden'); };
