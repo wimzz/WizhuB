@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • Auto‑Save & Latest Episode</title>
+  <title>WizhuB • Auto-Save & Episode Sync</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -209,10 +209,9 @@
             <button id="orderSourcesBtn" class="text-xs bg-yellow-600 hover:bg-yellow-500 px-2 py-1 rounded-full" title="Reorder sources"><i class="fas fa-arrows-alt"></i></button>
           </div>
           <div class="flex flex-wrap items-center gap-4 bg-black/30 p-3 rounded-xl">
-            <span class="text-sm"><i class="fas fa-clock"></i> Progress (auto-save every 30s):</span>
-            <span id="progressMinutesDisplay" class="text-sm text-yellow-400">0 min</span>
+            <span class="text-sm"><i class="fas fa-clock"></i> Progress auto-saves every 30 seconds</span>
           </div>
-          <p class="text-xs text-gray-400">Progress saves automatically every 30 seconds. Switching episode updates the same Continue Watching card.</p>
+          <p class="text-xs text-gray-400">Watching time increases automatically. Changing episode updates the same Continue Watching card.</p>
         </div>
 
         <div class="embed-container mt-3">
@@ -310,7 +309,6 @@
   const episodeSelect = document.getElementById('episodeSelect');
   const prevEpisodeBtn = document.getElementById('prevEpisodeBtn');
   const nextEpisodeBtn = document.getElementById('nextEpisodeBtn');
-  const progressMinutesDisplay = document.getElementById('progressMinutesDisplay');
   const reloadEmbedBtn = document.getElementById('reloadEmbedBtn');
   const globalSearch = document.getElementById('globalSearch');
   const orderModal = document.getElementById('orderModal');
@@ -359,7 +357,7 @@
     else embedIframe.srcdoc = '<div style="padding:2rem;color:red">Source unavailable</div>';
   }
 
-  // ================= AUTO-SAVE & DATABASE =================
+  // ================= DATABASE (one row per show) =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -383,8 +381,8 @@
       .upsert(record, { onConflict: 'user_id, media_type, tmdb_id' });
     if (error) console.error("Auto-save error:", error);
     else {
-      console.log("Auto-saved:", currentProgressMinutes, "min for", currentMedia.title, season>0?`S${season}E${episode}`:'');
-      renderContinueWatching(); // refresh continue watching list
+      console.log("Auto-saved:", currentProgressMinutes, "min for", currentMedia.title);
+      renderContinueWatching();
     }
   }
 
@@ -392,13 +390,12 @@
     if (autoSaveTimer) clearInterval(autoSaveTimer);
     autoSaveTimer = setInterval(() => {
       if (currentUser && currentMedia && playerPanel.classList.contains('hidden') === false) {
-        if (currentProgressMinutes < 120) { // cap at 120 min
+        if (currentProgressMinutes < 120) {
           currentProgressMinutes += 1;
-          progressMinutesDisplay.innerText = currentProgressMinutes + ' min';
           saveProgressToDB();
         }
       }
-    }, 30000); // every 30 seconds
+    }, 30000);
   }
 
   function stopAutoSave() {
@@ -417,8 +414,6 @@
       .maybeSingle();
     if (!error && data) {
       currentProgressMinutes = data.progress_minutes || 0;
-      progressMinutesDisplay.innerText = currentProgressMinutes + ' min';
-      // If TV show, restore last watched season/episode
       if (currentMedia.type === 'tv') {
         if (data.season_number && data.episode_number) {
           currentSeason = data.season_number;
@@ -427,7 +422,6 @@
       }
     } else {
       currentProgressMinutes = 0;
-      progressMinutesDisplay.innerText = '0 min';
     }
   }
 
@@ -493,7 +487,6 @@
           const movie = await res.json();
           await showDetails(movie, 'movie');
           currentProgressMinutes = item.progress_minutes;
-          progressMinutesDisplay.innerText = currentProgressMinutes + ' min';
           updateEmbedStream();
         } else {
           const res = await fetchWithRetry(`https://api.themoviedb.org/3/tv/${item.tmdb_id}?api_key=${TMDB_API_KEY}`);
@@ -506,7 +499,6 @@
           await loadEpisodes(currentMedia.id, currentSeason);
           episodeSelect.value = currentEpisode;
           currentProgressMinutes = item.progress_minutes;
-          progressMinutesDisplay.innerText = currentProgressMinutes + ' min';
           updateEmbedStream();
         }
       });
@@ -532,10 +524,10 @@
     if (currentIndex > 0) {
       currentEpisode = currentEpisodesList[currentIndex - 1].episode_number;
       episodeSelect.value = currentEpisode;
-      await loadProgress(); // loads progress for this show (same row)
+      await loadProgress(); // loads progress (same show row)
       updateEmbedStream();
       updateEpisodeNavigation();
-      saveProgressToDB(); // save to update the episode number in DB
+      saveProgressToDB(); // update episode number in DB
     }
   }
 
@@ -576,14 +568,14 @@
       await loadProgress();
       updateEmbedStream();
       updateEpisodeNavigation();
-      saveProgressToDB(); // save the new season/episode
+      saveProgressToDB();
     };
     episodeSelect.onchange = async () => {
       currentEpisode = parseInt(episodeSelect.value);
       await loadProgress();
       updateEmbedStream();
       updateEpisodeNavigation();
-      saveProgressToDB(); // save the new episode
+      saveProgressToDB();
     };
     updateEpisodeNavigation();
   }
@@ -651,8 +643,7 @@
       tvControlsDiv.classList.add('hidden');
     }
     await loadProgress();
-    // ensure a row exists (with current season/episode)
-    await saveProgressToDB();
+    await saveProgressToDB(); // ensure row exists
     updateEmbedStream();
     startAutoSave();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
