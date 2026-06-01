@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • Resume & Continue Watching</title>
+  <title>WizhuB • Resume & Delete</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -40,21 +40,22 @@
       position: absolute;
       top: 8px;
       right: 8px;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.7);
       border-radius: 50%;
       width: 28px;
       height: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ff4444;
+      color: #ff5555;
       cursor: pointer;
-      z-index: 10;
-      transition: background 0.2s;
+      z-index: 20;
+      transition: all 0.2s;
     }
     .delete-btn:hover {
-      background: rgba(255,68,68,0.8);
+      background: #ff5555;
       color: white;
+      transform: scale(1.05);
     }
     .embed-container {
       background: #000;
@@ -270,7 +271,7 @@
     else embedIframe.srcdoc = '<div style="padding:2rem;color:red">Source unavailable</div>';
   }
 
-  // Add or update entry (with 0 minutes if new)
+  // Add or update entry
   async function ensureWatchHistoryEntry() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -298,7 +299,7 @@
     if (error) console.error("Auto-add error:", error);
   }
 
-  // Save entered minutes
+  // Save progress
   async function saveProgressToDB() {
     if (!currentUser) { alert('Please login first'); return; }
     if (!currentMedia) return;
@@ -332,7 +333,7 @@
     }
   }
 
-  // Delete a watch history entry
+  // Delete entry
   async function deleteHistoryEntry(mediaType, tmdbId, season, episode) {
     if (!currentUser) return;
     const { error } = await sb
@@ -383,7 +384,7 @@
       .eq('user_id', currentUser.id)
       .order('last_watched', { ascending: false });
     if (error || !data) return;
-    // Deduplicate using Map (same key as unique constraint)
+    // Deduplicate using Map (unique per media_type+tmdb_id+season+episode)
     const uniqueMap = new Map();
     for (const item of data) {
       const key = `${item.media_type}_${item.tmdb_id}_${item.season_number}_${item.episode_number}`;
@@ -402,7 +403,7 @@
       card.style.flex = '0 0 160px';
       const progressPercent = Math.min((item.progress_minutes / 120) * 100, 100);
       card.innerHTML = `
-        <div class="delete-btn" data-delete='${JSON.stringify({media_type: item.media_type, tmdb_id: item.tmdb_id, season: item.season_number, episode: item.episode_number})}'>
+        <div class="delete-btn" data-id="${item.id}" data-media-type="${item.media_type}" data-tmdb="${item.tmdb_id}" data-season="${item.season_number}" data-episode="${item.episode_number}">
           <i class="fas fa-trash-alt text-xs"></i>
         </div>
         <img src="${poster}" class="w-full h-64 object-cover" loading="lazy">
@@ -416,9 +417,12 @@
       const deleteBtn = card.querySelector('.delete-btn');
       deleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const info = JSON.parse(deleteBtn.dataset.delete);
+        const mediaType = deleteBtn.dataset.mediaType;
+        const tmdbId = parseInt(deleteBtn.dataset.tmdb);
+        const season = parseInt(deleteBtn.dataset.season);
+        const episode = parseInt(deleteBtn.dataset.episode);
         if (confirm(`Delete "${item.title}" from Continue Watching?`)) {
-          await deleteHistoryEntry(info.media_type, info.tmdb_id, info.season, info.episode);
+          await deleteHistoryEntry(mediaType, tmdbId, season, episode);
         }
       });
       // Add click to resume
