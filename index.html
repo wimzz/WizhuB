@@ -152,7 +152,6 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    /* responsive grids for trending */
     .trending-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -162,7 +161,6 @@
     @media (min-width: 768px) { .trending-grid { grid-template-columns: repeat(4, 1fr); } }
     @media (min-width: 1024px) { .trending-grid { grid-template-columns: repeat(5, 1fr); } }
     @media (min-width: 1280px) { .trending-grid { grid-template-columns: repeat(6, 1fr); } }
-    /* player responsive */
     @media (max-width: 768px) {
       .player-panel .detail-poster {
         width: 120px;
@@ -177,12 +175,12 @@
         margin-top: 0.5rem;
       }
     }
-    input, select, button { font-size: 16px; } /* prevents zoom on mobile */
+    input, select, button { font-size: 16px; }
   </style>
 </head>
 <body class="text-gray-200">
 
-<!-- Navigation (responsive) -->
+<!-- Navigation -->
 <nav class="glass-nav">
   <div class="flex items-center gap-2">
     <i class="fas fa-crown text-2xl md:text-3xl text-yellow-400"></i>
@@ -204,7 +202,6 @@
 
 <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
   
-  <!-- Continue Watching Section -->
   <section id="continueWatchingSection" class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
     <div id="continueWatchingContainer" class="horizontal-scroll">
@@ -212,7 +209,6 @@
     </div>
   </section>
 
-  <!-- Player Panel (responsive) -->
   <div id="playerPanel" class="hidden mb-12 bg-gray-900/80 rounded-2xl p-4 md:p-5 border border-gray-700 shadow-2xl">
     <div class="flex flex-col md:flex-row gap-4 md:gap-6">
       <div class="md:w-1/5 flex flex-col items-center md:items-start">
@@ -230,7 +226,6 @@
         </div>
         <p id="detailOverview" class="text-gray-300 text-sm mt-2 line-clamp-3 leading-relaxed"></p>
         
-        <!-- TV Controls -->
         <div id="tvControls" class="hidden mt-4">
           <div class="flex flex-wrap gap-3 items-center">
             <select id="seasonSelect" class="bg-gray-800 border border-gray-600 rounded-full px-3 py-1 text-sm"></select>
@@ -264,7 +259,6 @@
     </div>
   </div>
 
-  <!-- Trending Movies & TV Shows -->
   <section class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
     <div id="trendingMoviesGrid" class="trending-grid"></div>
@@ -276,7 +270,6 @@
   </section>
 </main>
 
-<!-- Source Order Modal -->
 <div id="orderModal" class="modal">
   <div class="modal-content">
     <h3 class="text-xl font-bold mb-4">Reorder Stream Sources</h3>
@@ -288,7 +281,6 @@
   </div>
 </div>
 
-<!-- Login/Signup Modals -->
 <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
   <div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative">
     <h3 class="text-xl font-bold mb-4">Login</h3>
@@ -384,25 +376,48 @@
     container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>';
   }
 
-  // ================= SOURCE ORDER (safe loading) =================
+  // ================= SOURCE ORDER (always start with all sources) =================
   async function loadUserSourceOrder() {
-    if (!currentUser) return;
+    if (!currentUser) {
+      // Not logged in, use defaults
+      EMBED_SOURCES = [...DEFAULT_SOURCES];
+      populateSources();
+      return;
+    }
     try {
       const { data, error } = await sb.from('user_settings').select('source_order').eq('id', currentUser.id).maybeSingle();
-      if (!error && data && data.source_order && Array.isArray(data.source_order)) {
-        const newOrder = [];
-        for (const savedName of data.source_order) {
-          const found = DEFAULT_SOURCES.find(s => s.name === savedName);
-          if (found) newOrder.push({ name: found.name, url: found.url });
+      if (!error && data && data.source_order && Array.isArray(data.source_order) && data.source_order.length === DEFAULT_SOURCES.length) {
+        // Check if all names match exactly
+        const savedNames = data.source_order;
+        const defaultNames = DEFAULT_SOURCES.map(s => s.name);
+        let matches = true;
+        for (let i = 0; i < savedNames.length; i++) {
+          if (savedNames[i] !== defaultNames[i]) {
+            matches = false;
+            break;
+          }
         }
-        if (newOrder.length === data.source_order.length && newOrder.length > 0) {
-          EMBED_SOURCES = newOrder;
-        } else {
+        if (matches) {
+          // Exactly the default order, just keep defaults
           EMBED_SOURCES = [...DEFAULT_SOURCES];
-          await sb.from('user_settings').upsert({ id: currentUser.id, source_order: DEFAULT_SOURCES.map(s => s.name), updated_at: new Date().toISOString() });
+        } else {
+          // Reorder based on saved order
+          const newOrder = [];
+          for (const savedName of savedNames) {
+            const found = DEFAULT_SOURCES.find(s => s.name === savedName);
+            if (found) newOrder.push({ name: found.name, url: found.url });
+          }
+          if (newOrder.length === DEFAULT_SOURCES.length) {
+            EMBED_SOURCES = newOrder;
+          } else {
+            EMBED_SOURCES = [...DEFAULT_SOURCES];
+          }
         }
       } else {
+        // No saved order or invalid, use defaults
         EMBED_SOURCES = [...DEFAULT_SOURCES];
+        // Optionally save the default order to DB for this user
+        await sb.from('user_settings').upsert({ id: currentUser.id, source_order: DEFAULT_SOURCES.map(s => s.name), updated_at: new Date().toISOString() });
       }
     } catch (err) {
       console.error("Failed to load source order", err);
@@ -425,6 +440,7 @@
       opt.textContent = src.name;
       sourceSelect.appendChild(opt);
     });
+    console.log(`Populated ${EMBED_SOURCES.length} sources`); // Debug
   }
 
   function updateEmbedStream() {
@@ -445,7 +461,7 @@
     else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to generate URL</div>';
   }
 
-  // ================= DATABASE FUNCTIONS =================
+  // ================= DATABASE FUNCTIONS (identical as before) =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -565,7 +581,6 @@
     }
   }
 
-  // ================= TV EPISODE NAVIGATION =================
   async function updateEpisodeNavigation() {
     if (!currentMedia || currentMedia.type !== 'tv' || !currentEpisodesList.length) {
       prevEpisodeBtn.disabled = true;
@@ -603,7 +618,6 @@
     }
   }
 
-  // ================= TV HELPERS =================
   async function loadTVSeasons(tvId, preserveEpisode = false, forcedSeason = null, forcedEpisode = null) {
     const res = await fetchWithRetry(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}`);
     const data = await res.json();
@@ -810,7 +824,6 @@
     }).catch(console.error);
   }
 
-  // ================= SOURCE ORDER MODAL =================
   function openOrderModal() {
     sourceListDiv.innerHTML = '';
     EMBED_SOURCES.forEach((src, idx) => {
@@ -859,7 +872,6 @@
   closeOrderBtn.onclick = () => orderModal.style.display = 'none';
   orderSourcesBtn.onclick = openOrderModal;
 
-  // ================= EVENT LISTENERS =================
   closePlayerBtn.onclick = () => playerPanel.classList.add('hidden');
   reloadEmbedBtn.onclick = () => updateEmbedStream();
   sourceSelect.onchange = () => updateEmbedStream();
@@ -877,7 +889,6 @@
     searchTimeout = setTimeout(() => search(e.target.value), 500);
   });
 
-  // ================= LOGIN/SIGNUP MODALS =================
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
@@ -909,7 +920,6 @@
     playerPanel.classList.add('hidden');
   };
 
-  // ================= INIT =================
   populateSources();
   fetchTrending();
   updateAuthUI();
