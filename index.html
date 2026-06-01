@@ -176,7 +176,6 @@
 
 <script>
 (function() {
-  // ========== CONFIGURATION ==========
   const SUPABASE_URL = 'https://evhtzfkxolnlqlmjewew.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHR6Zmt4b2xubHFsbWpld2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMzOTUsImV4cCI6MjA5NTg2OTM5NX0.42bpsGRyKSZcQ3EUj1k3grsUVuXtZWKsce7OKv8J5YU';
   const TMDB_API_KEY = 'cf3fd5ed845e76f7c6786a61e521006c';
@@ -210,7 +209,7 @@
   let currentSeason = 1, currentEpisode = 1;
   let currentProgressMinutes = 0;
 
-  // DOM elements
+  // DOM elements (same as before, ensure they exist)
   const continueContainer = document.getElementById('continueWatchingContainer');
   const trendingMoviesGrid = document.getElementById('trendingMoviesGrid');
   const trendingTvGrid = document.getElementById('trendingTvGrid');
@@ -250,42 +249,37 @@
     else embedIframe.srcdoc = '<div style="padding:2rem;color:red">Source unavailable</div>';
   }
 
-  // Auto-add to watch history (with 0 minutes) if not already present
+  // Ensure that a row exists (with 0 minutes) without creating duplicates
   async function ensureWatchHistoryEntry() {
     if (!currentUser || !currentMedia) return;
-    let query = sb.from('watch_history').select('id')
-      .eq('user_id', currentUser.id)
-      .eq('media_type', currentMedia.type)
-      .eq('tmdb_id', currentMedia.id);
+    // Build conflict target: the unique constraint name
+    const record = {
+      user_id: currentUser.id,
+      media_type: currentMedia.type,
+      tmdb_id: currentMedia.id,
+      title: currentMedia.title,
+      poster_path: currentMedia.posterPath,
+      media_year: currentMedia.year,
+      rating: currentMedia.rating,
+      progress_minutes: 0,   // only set if new, otherwise ignored
+      last_watched: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
     if (currentMedia.type === 'tv') {
-      query = query.eq('season_number', currentSeason).eq('episode_number', currentEpisode);
-    } else {
-      query = query.is('season_number', null).is('episode_number', null);
+      record.season_number = currentSeason;
+      record.episode_number = currentEpisode;
     }
-    const { data } = await query.maybeSingle();
-    if (!data) {
-      const record = {
-        user_id: currentUser.id,
-        media_type: currentMedia.type,
-        tmdb_id: currentMedia.id,
-        title: currentMedia.title,
-        poster_path: currentMedia.posterPath,
-        media_year: currentMedia.year,
-        rating: currentMedia.rating,
-        progress_minutes: 0,
-        last_watched: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      if (currentMedia.type === 'tv') {
-        record.season_number = currentSeason;
-        record.episode_number = currentEpisode;
-      }
-      const { error } = await sb.from('watch_history').upsert(record);
-      if (error) console.error("Auto-add error:", error);
-      else {
-        console.log("Auto-added to continue watching:", currentMedia.title);
-        await renderContinueWatching();
-      }
+    // Use upsert with conflict target = the unique constraint columns
+    const { error } = await sb
+      .from('watch_history')
+      .upsert(record, { 
+        onConflict: 'user_id, media_type, tmdb_id, season_number, episode_number',
+        ignoreDuplicates: false
+      });
+    if (error) console.error("Auto-add error:", error);
+    else {
+      console.log("Ensured entry in continue watching");
+      await renderContinueWatching(); // refresh list
     }
   }
 
@@ -311,11 +305,14 @@
     }
     const { error } = await sb
       .from('watch_history')
-      .upsert(record, { onConflict: 'user_id, media_type, tmdb_id, season_number, episode_number' });
+      .upsert(record, { 
+        onConflict: 'user_id, media_type, tmdb_id, season_number, episode_number',
+        ignoreDuplicates: false
+      });
     if (error) alert('Save error: ' + error.message);
     else {
       currentProgressMinutes = minutes;
-      await renderContinueWatching();
+      await renderContinueWatching(); // refresh list
     }
   }
 
@@ -360,8 +357,17 @@
       continueContainer.innerHTML = '<div class="text-gray-400 text-sm">🎬 No watch history yet. Start watching a movie or TV show!</div>';
       return;
     }
-    continueContainer.innerHTML = '';
+    // Remove duplicates by using a Map keyed by unique identifier
+    const uniqueMap = new Map();
     for (const item of data) {
+      const key = `${item.media_type}_${item.tmdb_id}_${item.season_number || 0}_${item.episode_number || 0}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, item);
+      }
+    }
+    const uniqueData = Array.from(uniqueMap.values());
+    continueContainer.innerHTML = '';
+    for (const item of uniqueData) {
       const poster = item.poster_path ? IMG_BASE + item.poster_path : 'https://placehold.co/300x450';
       const card = document.createElement('div');
       card.className = 'movie-card relative';
@@ -401,7 +407,7 @@
     }
   }
 
-  // TV helpers
+  // TV helpers (same as before)
   async function loadTVSeasons(tvId) {
     const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}`);
     const data = await res.json();
@@ -469,7 +475,7 @@
       tvControlsDiv.classList.add('hidden');
     }
     await loadProgress();
-    await ensureWatchHistoryEntry();  // <-- THIS AUTO-ADDS TO CONTINUE WATCHING
+    await ensureWatchHistoryEntry(); // creates row if missing, but does NOT duplicate
     updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -542,13 +548,13 @@
       } else {
         document.getElementById('authContainer').classList.remove('hidden');
         document.getElementById('userContainer').classList.add('hidden');
-        renderContinueWatching();  // shows login message
+        renderContinueWatching();
         playerPanel.classList.add('hidden');
       }
     }).catch(console.error);
   }
 
-  // Modal handlers
+  // Modal handlers (same)
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
@@ -579,7 +585,6 @@
     playerPanel.classList.add('hidden');
   };
 
-  // Event listeners
   closePlayerBtn.onclick = () => playerPanel.classList.add('hidden');
   reloadEmbedBtn.onclick = () => updateEmbedStream();
   sourceSelect.onchange = () => updateEmbedStream();
@@ -591,7 +596,6 @@
     searchTimeout = setTimeout(() => search(e.target.value), 500);
   });
 
-  // Initialization
   populateSources();
   fetchTrending();
   updateAuthUI();
