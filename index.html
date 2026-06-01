@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WizhuB • All 26 Sources (Fixed)</title>
+  <title>WizhuB • All 26 Sources + Source Order</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -106,7 +106,9 @@
       border-radius: 1rem;
       padding: 1.5rem;
       width: 90%;
-      max-width: 400px;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
     }
     .source-item {
       display: flex;
@@ -171,7 +173,7 @@
 </head>
 <body class="text-gray-200">
 
-<!-- Navigation (identical to previous working version) -->
+<!-- Navigation (responsive) -->
 <nav class="glass-nav">
   <div class="flex items-center gap-2">
     <i class="fas fa-crown text-2xl md:text-3xl text-yellow-400"></i>
@@ -192,11 +194,13 @@
 </nav>
 
 <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
+  <!-- Continue Watching Section -->
   <section id="continueWatchingSection" class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
     <div id="continueWatchingContainer" class="horizontal-scroll"><div class="text-gray-400 text-sm">Log in to see your watch history.</div></div>
   </section>
 
+  <!-- Player Panel -->
   <div id="playerPanel" class="hidden mb-12 bg-gray-900/80 rounded-2xl p-4 md:p-5 border border-gray-700 shadow-2xl">
     <div class="flex flex-col md:flex-row gap-4 md:gap-6">
       <div class="md:w-1/5 flex flex-col items-center md:items-start">
@@ -244,20 +248,24 @@
     </div>
   </div>
 
+  <!-- Trending Movies -->
   <section class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
     <div id="trendingMoviesGrid" class="trending-grid"></div>
   </section>
+
+  <!-- Trending TV Shows -->
   <section class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-tv text-purple-400"></i> Trending TV Shows</h2>
     <div id="trendingTvGrid" class="trending-grid"></div>
   </section>
 </main>
 
+<!-- Source Order Modal (scrollable for many sources) -->
 <div id="orderModal" class="modal">
   <div class="modal-content">
     <h3 class="text-xl font-bold mb-4">Reorder Stream Sources</h3>
-    <div id="sourceList" class="mb-4"></div>
+    <div id="sourceList" class="mb-4" style="max-height: 50vh; overflow-y: auto;"></div>
     <div class="flex gap-2">
       <button id="saveOrderBtn" class="bg-green-600 px-4 py-2 rounded-full">Save Order</button>
       <button id="closeOrderBtn" class="bg-gray-600 px-4 py-2 rounded-full">Cancel</button>
@@ -265,6 +273,7 @@
   </div>
 </div>
 
+<!-- Login/Signup Modals -->
 <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
   <div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative">
     <h3 class="text-xl font-bold mb-4">Login</h3>
@@ -360,7 +369,7 @@
     container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>';
   }
 
-  // ================= SOURCE ORDER LOADING (FIXED) =================
+  // ================= SOURCE ORDER LOADING =================
   async function loadUserSourceOrder() {
     if (!currentUser) return;
     try {
@@ -407,7 +416,6 @@
       opt.textContent = src.name;
       sourceSelect.appendChild(opt);
     });
-    console.log(`✅ Sources loaded: ${EMBED_SOURCES.length}`);
   }
 
   function updateEmbedStream() {
@@ -428,7 +436,7 @@
     else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to generate URL</div>';
   }
 
-  // ================= DATABASE FUNCTIONS (unchanged, copy from previous working version) =================
+  // ================= DATABASE FUNCTIONS =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
