@@ -24,8 +24,125 @@
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1rem;
     }
+    /* Brand */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .brand i {
+      font-size: 1.8rem;
+    }
+    .brand span {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #facc15, #e5b80b);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: 1px;
+    }
+    /* Modern search container */
+    .search-wrapper {
+      flex: 1;
+      max-width: 400px;
+      position: relative;
+    }
+    .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: 0.9rem;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .search-input {
+      width: 100%;
+      background: #1a1d24;
+      border: 1px solid #2d2f3e;
+      border-radius: 2rem;
+      padding: 0.6rem 2.5rem 0.6rem 2.5rem;
+      color: #f0f0f0;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #facc15;
+      box-shadow: 0 0 0 2px rgba(250,204,21,0.2);
+    }
+    .clear-search {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: none;
+      transition: color 0.2s;
+    }
+    .clear-search:hover {
+      color: #facc15;
+    }
+    /* Nav buttons */
+    .nav-btn {
+      background: transparent;
+      border: 1px solid #facc15;
+      color: #facc15;
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .nav-btn:hover {
+      background: #facc15;
+      color: #0a0c10;
+    }
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      background: #facc15;
+      color: #0a0c10;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .glass-nav {
+        gap: 0.75rem;
+      }
+      .brand span {
+        font-size: 1.2rem;
+      }
+      .search-wrapper {
+        max-width: none;
+        width: 100%;
+        order: 3;
+      }
+      .nav-btn {
+        padding: 0.3rem 0.8rem;
+        font-size: 0.75rem;
+      }
+    }
+    /* Continue Watching section toggle (hidden during search) */
+    .continue-section-hidden {
+      display: none !important;
+    }
+    /* Rest of the styles (same as before) */
     .movie-card {
       transition: transform 0.25s ease, box-shadow 0.25s;
       cursor: pointer;
@@ -258,21 +375,6 @@
       70% { opacity: 1; }
       100% { opacity: 0; visibility: hidden; }
     }
-    .search-input {
-      background: #1a1d24 !important;
-      border: 1px solid #2d2f3e !important;
-      color: #f0f0f0 !important;
-      border-radius: 9999px !important;
-      transition: all 0.2s;
-    }
-    .search-input::placeholder {
-      color: #7e849c !important;
-    }
-    .search-input:focus {
-      border-color: #facc15 !important;
-      box-shadow: 0 0 0 2px rgba(250,204,21,0.2) !important;
-      outline: none;
-    }
     .copy-title-icon {
       cursor: pointer;
       margin-left: 0.5rem;
@@ -280,65 +382,41 @@
       color: #9ca3af;
       transition: color 0.2s;
     }
-    .copy-title-icon:hover {
-      color: #facc15;
-    }
+    .copy-title-icon:hover { color: #facc15; }
     .title-wrapper {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
       gap: 0.5rem;
     }
-    /* User avatar circle */
-    .user-avatar {
-      width: 36px;
-      height: 36px;
-      background: #facc15;
-      color: #0a0c10;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      text-transform: uppercase;
-      cursor: pointer;
-    }
-    .nav-btn {
-      background: transparent;
-      border: 1px solid #facc15;
-      color: #facc15;
-      padding: 0.3rem 0.9rem;
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-    .nav-btn:hover {
-      background: #facc15;
-      color: #0a0c10;
-    }
   </style>
 </head>
 <body class="text-gray-200">
 
-<!-- UPDATED NAVBAR -->
+<!-- NAVBAR (updated) -->
 <nav class="glass-nav">
-  <!-- Brand: WIZHUB all caps -->
-  <div class="flex items-center gap-2">
-    <i class="fas fa-crown text-2xl md:text-3xl text-yellow-400"></i>
-    <span class="text-xl md:text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent tracking-wide">WIZHUB</span>
+  <!-- Brand -->
+  <div class="brand">
+    <i class="fas fa-crown text-yellow-400"></i>
+    <span>WIZHUB</span>
   </div>
-  <!-- Search bar (fixed icon alignment) -->
-  <div class="flex-1 max-w-md relative">
-    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm z-10 pointer-events-none"></i>
-    <input type="text" id="globalSearch" placeholder="Search movies or TV shows..." class="w-full search-input py-2 pl-10 pr-4 text-sm">
+
+  <!-- Modern search bar with clear button -->
+  <div class="search-wrapper">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text" id="globalSearch" placeholder="Search movies or TV shows..." class="search-input" autocomplete="off">
+    <button id="clearSearchBtn" class="clear-search" aria-label="Clear search">
+      <i class="fas fa-times-circle"></i>
+    </button>
   </div>
-  <!-- OGList button (always visible) -->
+
+  <!-- OGList button -->
   <a href="oglist.html" class="nav-btn" target="_self"><i class="fas fa-link mr-1"></i> OGList</a>
+
   <!-- Auth section -->
   <div id="authContainer" class="flex gap-2">
-    <button id="showLoginBtn" class="px-3 py-1.5 rounded-full border border-yellow-500 text-yellow-400 text-sm hover:bg-yellow-500/10 transition">Login</button>
-    <button id="showSignupBtn" class="px-3 py-1.5 rounded-full bg-yellow-500 text-black text-sm font-semibold hover:bg-yellow-400 transition">Sign up</button>
+    <button id="showLoginBtn" class="nav-btn">Login</button>
+    <button id="showSignupBtn" class="nav-btn bg-yellow-500 text-black border-yellow-500 hover:bg-yellow-400">Sign up</button>
   </div>
   <div id="userContainer" class="hidden items-center gap-3">
     <div class="user-avatar" id="userAvatar">U</div>
@@ -347,11 +425,13 @@
 </nav>
 
 <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
+  <!-- Continue Watching section (can be hidden during search) -->
   <section id="continueWatchingSection" class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
     <div id="continueWatchingContainer" class="horizontal-scroll"><div class="text-gray-400 text-sm">Log in to see your watch history.</div></div>
   </section>
 
+  <!-- Player Panel -->
   <div id="playerPanel" class="hidden mb-12 player-modern">
     <div class="embed-container">
       <iframe id="embedIframe" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
@@ -415,6 +495,7 @@
     </div>
   </div>
 
+  <!-- Trending Movies & TV Shows -->
   <section class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
     <div id="trendingMoviesGrid" class="trending-grid"></div>
@@ -425,6 +506,7 @@
   </section>
 </main>
 
+<!-- Modals (unchanged) -->
 <div id="orderModal" class="modal">
   <div class="modal-content">
     <h3 class="text-xl font-bold mb-4">Reorder Stream Sources</h3>
@@ -459,6 +541,7 @@
 
 <script>
 (function() {
+  // ================= SOURCES (unchanged) =================
   const DEFAULT_SOURCES = [
     { name: 'Videoasy', url: (type, id, s, e) => type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}` },
     { name: 'VidFast', url: (type, id, s, e) => type === 'movie' ? `https://vidfast.pro/movie/${id}?autoPlay=true` : `https://vidfast.pro/tv/${id}/${s}/${e}?autoPlay=true` },
@@ -498,6 +581,7 @@
   let currentEpisodesList = [];
 
   // DOM elements
+  const continueSection = document.getElementById('continueWatchingSection');
   const continueContainer = document.getElementById('continueWatchingContainer');
   const trendingMoviesGrid = document.getElementById('trendingMoviesGrid');
   const trendingTvGrid = document.getElementById('trendingTvGrid');
@@ -516,6 +600,7 @@
   const nextSourceBtn = document.getElementById('nextSourceBtn');
   const copyUrlBtn = document.getElementById('copyUrlBtn');
   const globalSearch = document.getElementById('globalSearch');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
   const orderModal = document.getElementById('orderModal');
   const sourceListDiv = document.getElementById('sourceList');
   const saveOrderBtn = document.getElementById('saveOrderBtn');
@@ -527,6 +612,42 @@
 
   function showLoading(container) { container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>'; }
 
+  // ================= SEARCH BEHAVIOR (hide Continue Watching when searching) =================
+  function updateContinueVisibility() {
+    const query = globalSearch.value.trim();
+    if (query !== '') {
+      continueSection.classList.add('continue-section-hidden');
+    } else {
+      continueSection.classList.remove('continue-section-hidden');
+    }
+    // Show/hide clear button
+    if (query !== '') {
+      clearSearchBtn.style.display = 'block';
+    } else {
+      clearSearchBtn.style.display = 'none';
+    }
+  }
+
+  // Clear search input
+  function clearSearch() {
+    globalSearch.value = '';
+    updateContinueVisibility();
+    search(globalSearch.value);
+    globalSearch.focus();
+  }
+
+  // Debounced search
+  let searchTimeout;
+  function handleSearchInput(e) {
+    const query = e.target.value;
+    updateContinueVisibility();
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      search(query);
+    }, 500);
+  }
+
+  // ================= SOURCE ORDER (unchanged) =================
   async function loadUserSourceOrder() {
     if (!currentUser) return;
     try {
@@ -971,11 +1092,13 @@
         if (userAvatar) userAvatar.innerText = firstLetter;
         await loadUserSourceOrder();
         await renderContinueWatching();
+        updateContinueVisibility(); // ensure continue section is shown if no search
       } else {
         document.getElementById('authContainer').classList.remove('hidden');
         document.getElementById('userContainer').classList.add('hidden');
         renderContinueWatching();
         playerPanel.classList.add('hidden');
+        updateContinueVisibility();
       }
     }).catch(console.error);
   }
@@ -1028,6 +1151,7 @@
   closeOrderBtn.onclick = () => orderModal.style.display = 'none';
   orderSourcesBtn.onclick = openOrderModal;
 
+  // Event listeners
   closePlayerBtn.onclick = () => playerPanel.classList.add('hidden');
   reloadEmbedBtn.onclick = () => updateEmbedStream();
   sourceSelect.onchange = () => updateEmbedStream();
@@ -1041,6 +1165,7 @@
   prevEpisodeBtn.onclick = goToPreviousEpisode;
   nextEpisodeBtn.onclick = goToNextEpisode;
 
+  // Copy title
   function copyTitleToClipboard() {
     const title = detailTitleSpan.innerText;
     if (!title || title === '') return;
@@ -1052,16 +1177,22 @@
       setTimeout(() => toast.remove(), 1500);
     }).catch(err => console.warn('Copy failed', err));
   }
-
   if (detailTitleSpan) detailTitleSpan.addEventListener('click', copyTitleToClipboard);
   if (copyTitleIcon) copyTitleIcon.addEventListener('click', copyTitleToClipboard);
 
-  let searchTimeout;
-  globalSearch.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => search(e.target.value), 500);
+  // Search events
+  globalSearch.addEventListener('input', handleSearchInput);
+  clearSearchBtn.addEventListener('click', clearSearch);
+  globalSearch.addEventListener('focus', updateContinueVisibility);
+  globalSearch.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (!globalSearch.value.trim()) {
+        updateContinueVisibility();
+      }
+    }, 200);
   });
 
+  // Login/Signup modals (unchanged)
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
@@ -1093,10 +1224,12 @@
     playerPanel.classList.add('hidden');
   };
 
+  // Init
   populateSources();
   fetchTrending();
   updateAuthUI();
   sb.auth.onAuthStateChange(() => updateAuthUI());
+  updateContinueVisibility();
 })();
 </script>
 </body>
