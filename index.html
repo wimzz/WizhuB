@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WizhuB • Responsive • All Sources</title>
+  <title>WizhuB • All Sources • Responsive</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* responsive extras */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .glass-nav {
@@ -90,9 +89,7 @@
       flex: 0 0 140px;
     }
     @media (min-width: 768px) {
-      .horizontal-scroll .movie-card {
-        flex: 0 0 160px;
-      }
+      .horizontal-scroll .movie-card { flex: 0 0 160px; }
     }
     .modal {
       display: none;
@@ -155,25 +152,17 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    /* responsive grid for trending */
+    /* responsive grids for trending */
     .trending-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 1rem;
     }
-    @media (min-width: 640px) {
-      .trending-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (min-width: 768px) {
-      .trending-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (min-width: 1024px) {
-      .trending-grid { grid-template-columns: repeat(5, 1fr); }
-    }
-    @media (min-width: 1280px) {
-      .trending-grid { grid-template-columns: repeat(6, 1fr); }
-    }
-    /* player panel responsive */
+    @media (min-width: 640px) { .trending-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 768px) { .trending-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1024px) { .trending-grid { grid-template-columns: repeat(5, 1fr); } }
+    @media (min-width: 1280px) { .trending-grid { grid-template-columns: repeat(6, 1fr); } }
+    /* player responsive */
     @media (max-width: 768px) {
       .player-panel .detail-poster {
         width: 120px;
@@ -182,18 +171,13 @@
       .player-panel .flex-col {
         flex-direction: column;
       }
-      .episode-nav {
-        flex-wrap: wrap;
-      }
       .glass-nav .flex-1 {
         order: 3;
         width: 100%;
         margin-top: 0.5rem;
       }
     }
-    input, select, button {
-      font-size: 16px; /* prevents zoom on mobile */
-    }
+    input, select, button { font-size: 16px; } /* prevents zoom on mobile */
   </style>
 </head>
 <body class="text-gray-200">
@@ -228,7 +212,7 @@
     </div>
   </section>
 
-  <!-- Player Panel (responsive layout) -->
+  <!-- Player Panel (responsive) -->
   <div id="playerPanel" class="hidden mb-12 bg-gray-900/80 rounded-2xl p-4 md:p-5 border border-gray-700 shadow-2xl">
     <div class="flex flex-col md:flex-row gap-4 md:gap-6">
       <div class="md:w-1/5 flex flex-col items-center md:items-start">
@@ -280,7 +264,7 @@
     </div>
   </div>
 
-  <!-- Trending Movies & TV Shows (responsive grids) -->
+  <!-- Trending Movies & TV Shows -->
   <section class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
     <div id="trendingMoviesGrid" class="trending-grid"></div>
@@ -304,7 +288,7 @@
   </div>
 </div>
 
-<!-- Login/Signup Modals (unchanged, just responsive) -->
+<!-- Login/Signup Modals -->
 <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
   <div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative">
     <h3 class="text-xl font-bold mb-4">Login</h3>
@@ -373,7 +357,7 @@
   let currentTVDetails = null;
   let currentEpisodesList = [];
 
-  // DOM elements (same as before)
+  // DOM elements
   const continueContainer = document.getElementById('continueWatchingContainer');
   const trendingMoviesGrid = document.getElementById('trendingMoviesGrid');
   const trendingTvGrid = document.getElementById('trendingTvGrid');
@@ -461,7 +445,7 @@
     else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to generate URL</div>';
   }
 
-  // ================= DATABASE FUNCTIONS (unchanged) =================
+  // ================= DATABASE FUNCTIONS =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -581,7 +565,7 @@
     }
   }
 
-  // ================= TV EPISODE NAVIGATION (unchanged) =================
+  // ================= TV EPISODE NAVIGATION =================
   async function updateEpisodeNavigation() {
     if (!currentMedia || currentMedia.type !== 'tv' || !currentEpisodesList.length) {
       prevEpisodeBtn.disabled = true;
@@ -619,6 +603,7 @@
     }
   }
 
+  // ================= TV HELPERS =================
   async function loadTVSeasons(tvId, preserveEpisode = false, forcedSeason = null, forcedEpisode = null) {
     const res = await fetchWithRetry(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}`);
     const data = await res.json();
