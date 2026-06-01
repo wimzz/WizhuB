@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • One Card Per Show (Always Latest Episode)</title>
+  <title>WizhuB • Fixed Video Playback</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -358,8 +358,12 @@
     } else {
       url = src.url('tv', currentMedia.id, currentSeason, currentEpisode);
     }
-    if (url) embedIframe.src = url;
-    else embedIframe.srcdoc = '<div style="padding:2rem;color:red">Source unavailable</div>';
+    console.log('Loading embed URL:', url);  // Check console (F12)
+    if (url) {
+      embedIframe.src = url;
+    } else {
+      embedIframe.srcdoc = '<div style="padding:2rem;color:red;text-align:center">❌ Source unavailable</div>';
+    }
   }
 
   // ================= DATABASE =================
@@ -515,8 +519,8 @@
     if (currentIndex > 0) {
       currentEpisode = currentEpisodesList[currentIndex - 1].episode_number;
       episodeSelect.value = currentEpisode;
-      await saveProgressToDB();            // update DB with new episode
-      await renderContinueWatching();      // refresh continue watching immediately
+      await saveProgressToDB();
+      await renderContinueWatching();
       updateEmbedStream();
       updateEpisodeNavigation();
     }
@@ -633,7 +637,7 @@
       tvControlsDiv.classList.add('hidden');
     }
     await loadProgress();
-    await saveProgressToDB();  // ensures a row exists with current episode
+    await saveProgressToDB();
     updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
