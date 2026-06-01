@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • One Card Per Show</title>
+  <title>WizhuB • Resume & Source Order</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -77,6 +77,29 @@
     .horizontal-scroll .movie-card {
       flex: 0 0 160px;
     }
+    .settings-panel {
+      background: #1e1f2c;
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .source-item {
+      background: #2a2c38;
+      padding: 0.5rem;
+      margin: 0.25rem 0;
+      border-radius: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .source-order-btns button {
+      background: #3a3c48;
+      border: none;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      margin: 0 0.1rem;
+    }
   </style>
 </head>
 <body class="text-gray-200">
@@ -103,6 +126,16 @@
 
 <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
   
+  <!-- Settings Panel (Source Order) -->
+  <div class="settings-panel mb-6">
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="font-semibold"><i class="fas fa-sliders-h"></i> Stream Source Order</h3>
+      <button id="saveSourceOrderBtn" class="text-xs bg-yellow-500 text-black px-3 py-1 rounded-full">Save Order</button>
+    </div>
+    <div id="sourceOrderList" class="space-y-1"></div>
+    <p class="text-xs text-gray-400 mt-2">Drag or use buttons to reorder. The top source will be selected by default.</p>
+  </div>
+
   <!-- Continue Watching Section -->
   <section id="continueWatchingSection" class="mb-12">
     <h2 class="text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
@@ -203,7 +236,9 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHR6Zmt4b2xubHFsbWpld2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMzOTUsImV4cCI6MjA5NTg2OTM5NX0.42bpsGRyKSZcQ3EUj1k3grsUVuXtZWKsce7OKv8J5YU';
   const TMDB_API_KEY = 'cf3fd5ed845e76f7c6786a61e521006c';
   const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
-  const EMBED_SOURCES = [
+  
+  // Base sources (without order)
+  const BASE_SOURCES = [
     { name: '🎬 Vidsrc', url: (type, id, s, e, minutes) => {
         let base = type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
         return minutes > 0 ? base + `?t=${minutes * 60}` : base;
@@ -226,9 +261,71 @@
     }
   ];
 
+  let EMBED_SOURCES = [...BASE_SOURCES]; // will be reordered from localStorage
+
+  // Load source order from localStorage
+  function loadSourceOrder() {
+    const savedOrder = localStorage.getItem('embedSourceOrder');
+    if (savedOrder) {
+      try {
+        const order = JSON.parse(savedOrder);
+        const ordered = [];
+        for (const name of order) {
+          const found = BASE_SOURCES.find(s => s.name === name);
+          if (found) ordered.push(found);
+        }
+        // Add any missing new sources
+        for (const src of BASE_SOURCES) {
+          if (!ordered.some(s => s.name === src.name)) ordered.push(src);
+        }
+        EMBED_SOURCES = ordered;
+      } catch(e) { console.error(e); }
+    }
+    renderSourceOrderList();
+  }
+
+  function saveSourceOrder() {
+    const order = EMBED_SOURCES.map(s => s.name);
+    localStorage.setItem('embedSourceOrder', JSON.stringify(order));
+    renderSourceOrderList();
+    populateSources(); // refresh the dropdown
+  }
+
+  function renderSourceOrderList() {
+    const container = document.getElementById('sourceOrderList');
+    if (!container) return;
+    container.innerHTML = '';
+    EMBED_SOURCES.forEach((src, idx) => {
+      const div = document.createElement('div');
+      div.className = 'source-item';
+      div.innerHTML = `
+        <span>${src.name}</span>
+        <div class="source-order-btns">
+          <button data-idx="${idx}" data-dir="up" ${idx === 0 ? 'disabled' : ''}>↑</button>
+          <button data-idx="${idx}" data-dir="down" ${idx === EMBED_SOURCES.length-1 ? 'disabled' : ''}>↓</button>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+    // attach button events
+    document.querySelectorAll('.source-order-btns button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(btn.dataset.idx);
+        const dir = btn.dataset.dir;
+        if (dir === 'up' && idx > 0) {
+          [EMBED_SOURCES[idx-1], EMBED_SOURCES[idx]] = [EMBED_SOURCES[idx], EMBED_SOURCES[idx-1]];
+        } else if (dir === 'down' && idx < EMBED_SOURCES.length-1) {
+          [EMBED_SOURCES[idx], EMBED_SOURCES[idx+1]] = [EMBED_SOURCES[idx+1], EMBED_SOURCES[idx]];
+        }
+        saveSourceOrder();
+        populateSources();
+      });
+    });
+  }
+
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentUser = null;
-  let currentMedia = null;      // { type, id, title, posterPath, year, rating, overview }
+  let currentMedia = null;
   let currentSeason = 1, currentEpisode = 1;
   let currentProgressMinutes = 0;
 
@@ -296,7 +393,6 @@
     if (error) console.error("Auto-add error:", error);
   }
 
-  // Save progress (updates the same row for the whole show/movie)
   async function saveProgressToDB() {
     if (!currentUser) { alert('Please login first'); return; }
     if (!currentMedia) return;
@@ -326,7 +422,6 @@
     }
   }
 
-  // Delete entry (show/movie)
   async function deleteHistoryEntry(mediaType, tmdbId) {
     if (!currentUser) return;
     const { error } = await sb
@@ -339,7 +434,6 @@
     else await renderContinueWatching();
   }
 
-  // Load saved progress for the current show/movie
   async function loadProgress() {
     if (!currentUser || !currentMedia) return;
     const { data, error } = await sb
@@ -359,7 +453,6 @@
     }
   }
 
-  // Render Continue Watching (one card per show/movie)
   async function renderContinueWatching() {
     if (!currentUser) {
       continueContainer.innerHTML = '<div class="text-gray-400 text-sm">🔒 Log in to see your continue watching list.</div>';
@@ -393,7 +486,6 @@
         </div>
         <div class="progress-overlay" style="width: ${progressPercent}%;"></div>
       `;
-      // Delete event
       const deleteBtn = card.querySelector('.delete-btn');
       deleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -403,7 +495,6 @@
           await deleteHistoryEntry(mediaType, tmdbId);
         }
       });
-      // Resume event
       card.addEventListener('click', async (e) => {
         if (e.target.closest('.delete-btn')) return;
         if (item.media_type === 'movie') {
@@ -417,13 +508,6 @@
           const res = await fetch(`https://api.themoviedb.org/3/tv/${item.tmdb_id}?api_key=${TMDB_API_KEY}`);
           const tv = await res.json();
           await showDetails(tv, 'tv');
-          // Do NOT reset season/episode – preserve current selection
-          // Ensure TV controls are loaded
-          if (!seasonSelect.options.length) {
-            await loadTVSeasons(currentMedia.id);
-          }
-          seasonSelect.value = currentSeason;
-          episodeSelect.value = currentEpisode;
           currentProgressMinutes = item.progress_minutes;
           progressMinutesInput.value = currentProgressMinutes;
           updateEmbedStream();
@@ -433,7 +517,7 @@
     }
   }
 
-  // TV helpers (same as before, but progress is show-wide)
+  // TV helpers (no progress load on season/episode change)
   async function loadTVSeasons(tvId) {
     const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}`);
     const data = await res.json();
@@ -451,7 +535,6 @@
     seasonSelect.onchange = async () => {
       currentSeason = parseInt(seasonSelect.value);
       await loadEpisodes(tvId, currentSeason);
-      // No need to loadProgress again – same show progress
       updateEmbedStream();
     };
     episodeSelect.onchange = async () => {
@@ -492,19 +575,15 @@
     
     if (type === 'tv') {
       tvControlsDiv.classList.remove('hidden');
-      // Preserve current season/episode if already set, else default 1
-      if (!seasonSelect.options.length) {
-        currentSeason = 1;
-        currentEpisode = 1;
-        await loadTVSeasons(item.id);
-      }
+      currentSeason = 1;
+      currentEpisode = 1;
+      await loadTVSeasons(item.id);
     } else {
       tvControlsDiv.classList.add('hidden');
     }
     
-    // Load saved progress (shared for show)
     await loadProgress();
-    await ensureWatchHistoryEntry(); // ensures row exists
+    await ensureWatchHistoryEntry();
     updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -583,7 +662,7 @@
     }).catch(console.error);
   }
 
-  // Modal handlers (unchanged)
+  // Modal handlers
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
@@ -619,6 +698,7 @@
   reloadEmbedBtn.onclick = () => updateEmbedStream();
   sourceSelect.onchange = () => updateEmbedStream();
   saveProgressBtn.onclick = saveProgressToDB;
+  document.getElementById('saveSourceOrderBtn').onclick = () => saveSourceOrder();
   
   let searchTimeout;
   globalSearch.addEventListener('input', (e) => {
@@ -626,6 +706,8 @@
     searchTimeout = setTimeout(() => search(e.target.value), 500);
   });
 
+  // Initialize
+  loadSourceOrder();
   populateSources();
   fetchTrending();
   updateAuthUI();
