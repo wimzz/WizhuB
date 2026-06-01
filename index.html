@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WizhuB • Custom Source Order</title>
+  <title>WizhuB • Copy URL & Next Source</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* styles unchanged – fully responsive */
+    /* all styles unchanged from previous version – fully responsive */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .glass-nav {
@@ -170,11 +170,29 @@
       .glass-nav .flex-1 { order: 3; width: 100%; margin-top: 0.5rem; }
     }
     input, select, button { font-size: 16px; }
+    .toast-notification {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2a2c38;
+      color: #facc15;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 14px;
+      z-index: 300;
+      animation: fadeOut 2s forwards;
+    }
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      70% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
   </style>
 </head>
 <body class="text-gray-200">
 
-<!-- Navigation -->
+<!-- Navigation (unchanged) -->
 <nav class="glass-nav">
   <div class="flex items-center gap-2">
     <i class="fas fa-crown text-2xl md:text-3xl text-yellow-400"></i>
@@ -195,13 +213,12 @@
 </nav>
 
 <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
-  <!-- Continue Watching -->
   <section id="continueWatchingSection" class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
     <div id="continueWatchingContainer" class="horizontal-scroll"><div class="text-gray-400 text-sm">Log in to see your watch history.</div></div>
   </section>
 
-  <!-- Player Panel -->
+  <!-- Player Panel (new buttons added) -->
   <div id="playerPanel" class="hidden mb-12 bg-gray-900/80 rounded-2xl p-4 md:p-5 border border-gray-700 shadow-2xl">
     <div class="flex flex-col md:flex-row gap-4 md:gap-6">
       <div class="md:w-1/5 flex flex-col items-center md:items-start">
@@ -233,6 +250,8 @@
             <span class="text-sm font-medium">Source:</span>
             <select id="sourceSelect" class="bg-gray-800 border border-gray-600 rounded-full px-3 py-1 text-sm flex-1 min-w-[120px]"></select>
             <button id="reloadEmbedBtn" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full"><i class="fas fa-sync-alt"></i> Reload</button>
+            <button id="nextSourceBtn" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full" title="Next source"><i class="fas fa-forward"></i> Next</button>
+            <button id="copyUrlBtn" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full" title="Copy video URL"><i class="fas fa-copy"></i> Copy URL</button>
             <button id="orderSourcesBtn" class="text-xs bg-yellow-600 hover:bg-yellow-500 px-2 py-1 rounded-full" title="Reorder sources"><i class="fas fa-arrows-alt"></i></button>
           </div>
           <div class="flex flex-wrap items-center gap-4 bg-black/30 p-3 rounded-xl">
@@ -249,7 +268,6 @@
     </div>
   </div>
 
-  <!-- Trending Movies & TV Shows -->
   <section class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2>
     <div id="trendingMoviesGrid" class="trending-grid"></div>
@@ -272,7 +290,7 @@
   </div>
 </div>
 
-<!-- Login/Signup Modals -->
+<!-- Login/Signup Modals (unchanged) -->
 <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
   <div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative">
     <h3 class="text-xl font-bold mb-4">Login</h3>
@@ -296,7 +314,7 @@
 
 <script>
 (function() {
-  // ================= CUSTOM SOURCE ORDER (23 sources, removed Embed.su, 2Embed, Vidplay) =================
+  // ================= SOURCES (custom order, 23 sources) =================
   const DEFAULT_SOURCES = [
     { name: 'Videoasy', url: (type, id, s, e) => type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}` },
     { name: 'VidFast', url: (type, id, s, e) => type === 'movie' ? `https://vidfast.pro/movie/${id}?autoPlay=true` : `https://vidfast.pro/tv/${id}/${s}/${e}?autoPlay=true` },
@@ -338,7 +356,7 @@
   let currentTVDetails = null;
   let currentEpisodesList = [];
 
-  // DOM elements
+  // DOM elements (additional buttons)
   const continueContainer = document.getElementById('continueWatchingContainer');
   const trendingMoviesGrid = document.getElementById('trendingMoviesGrid');
   const trendingTvGrid = document.getElementById('trendingTvGrid');
@@ -354,6 +372,8 @@
   const progressMinutesInput = document.getElementById('progressMinutes');
   const saveProgressBtn = document.getElementById('saveProgressBtn');
   const reloadEmbedBtn = document.getElementById('reloadEmbedBtn');
+  const nextSourceBtn = document.getElementById('nextSourceBtn');
+  const copyUrlBtn = document.getElementById('copyUrlBtn');
   const globalSearch = document.getElementById('globalSearch');
   const orderModal = document.getElementById('orderModal');
   const sourceListDiv = document.getElementById('sourceList');
@@ -431,7 +451,38 @@
     else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to generate URL</div>';
   }
 
-  // ================= DATABASE FUNCTIONS (unchanged from working version) =================
+  // Next source function
+  function nextSource() {
+    if (!sourceSelect.options.length) return;
+    let newIdx = parseInt(sourceSelect.value) + 1;
+    if (newIdx >= sourceSelect.options.length) newIdx = 0;
+    sourceSelect.value = newIdx;
+    // Trigger the same action as if user changed the dropdown
+    sourceSelect.dispatchEvent(new Event('change'));
+  }
+
+  // Copy URL function
+  async function copyVideoUrl() {
+    const url = embedIframe.src;
+    if (!url || url === 'about:blank') {
+      alert('No video URL to copy');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      // Show a small notification
+      const toast = document.createElement('div');
+      toast.className = 'toast-notification';
+      toast.textContent = '✓ URL copied to clipboard';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2000);
+    } catch (err) {
+      console.error('Copy failed', err);
+      alert('Could not copy URL');
+    }
+  }
+
+  // ================= DATABASE FUNCTIONS (unchanged) =================
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -847,6 +898,8 @@
   closePlayerBtn.onclick = () => playerPanel.classList.add('hidden');
   reloadEmbedBtn.onclick = () => updateEmbedStream();
   sourceSelect.onchange = () => updateEmbedStream();
+  nextSourceBtn.onclick = nextSource;
+  copyUrlBtn.onclick = copyVideoUrl;
   saveProgressBtn.onclick = async () => {
     currentProgressMinutes = parseInt(progressMinutesInput.value) || 0;
     await saveProgressToDB();
