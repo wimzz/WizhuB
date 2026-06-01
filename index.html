@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • Fixed Video & Resume Episode</title>
+  <title>WizhuB • Fully Fixed</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -137,13 +137,6 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    .error-message {
-      background: #ff4444;
-      color: white;
-      padding: 10px;
-      text-align: center;
-      border-radius: 8px;
-    }
   </style>
 </head>
 <body class="text-gray-200">
@@ -225,7 +218,7 @@
         <div class="embed-container mt-3">
           <iframe id="embedIframe" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
         </div>
-        <p class="text-[10px] text-gray-500 text-center mt-2">If video doesn't load, try another source or refresh.</p>
+        <p class="text-[10px] text-gray-500 text-center mt-2">If video doesn't load, try another source.</p>
       </div>
     </div>
   </div>
@@ -283,14 +276,8 @@
 
 <script>
 (function() {
-  // ================= CONFIGURATION =================
-  const SUPABASE_URL = 'https://evhtzfkxolnlqlmjewew.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHR6Zmt4b2xubHFsbWpld2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMzOTUsImV4cCI6MjA5NTg2OTM5NX0.42bpsGRyKSZcQ3EUj1k3grsUVuXtZWKsce7OKv8J5YU';
-  const TMDB_API_KEY = 'cf3fd5ed845e76f7c6786a61e521006c';
-  const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
-  
-  // Fixed embed sources with proper referrer handling
-  let EMBED_SOURCES = [
+  // ================= DEFAULT SOURCES =================
+  const DEFAULT_SOURCES = [
     { name: '🎬 Vidsrc', url: (type, id, s, e) => type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
     { name: '📺 2Embed', url: (type, id, s, e) => type === 'movie' ? `https://2embed.sx/embed/movie?tmdb=${id}` : `https://2embed.sx/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
     { name: '🌀 Embed.su', url: (type, id, s, e) => type === 'movie' ? `https://embed.su/embed/movie/${id}` : `https://embed.su/embed/tv/${id}/${s}/${e}` },
@@ -299,6 +286,13 @@
     { name: '📀 VidUp', url: (type, id, s, e) => type === 'movie' ? `https://vidup.to/movie/${id}` : `https://vidup.to/tv/${id}/${s}/${e}` },
     { name: '🎞️ VAPlayer', url: (type, id, s, e) => type === 'movie' ? `https://vaplayer.ru/embed/movie/${id}` : `https://vaplayer.ru/embed/tv/${id}/${s}/${e}` }
   ];
+
+  let EMBED_SOURCES = [...DEFAULT_SOURCES];
+
+  const SUPABASE_URL = 'https://evhtzfkxolnlqlmjewew.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHR6Zmt4b2xubHFsbWpld2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTMzOTUsImV4cCI6MjA5NTg2OTM5NX0.42bpsGRyKSZcQ3EUj1k3grsUVuXtZWKsce7OKv8J5YU';
+  const TMDB_API_KEY = 'cf3fd5ed845e76f7c6786a61e521006c';
+  const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let currentUser = null;
@@ -339,14 +333,25 @@
   async function loadUserSourceOrder() {
     if (!currentUser) return;
     const { data, error } = await sb.from('user_settings').select('source_order').eq('id', currentUser.id).maybeSingle();
-    if (!error && data && data.source_order && Array.isArray(data.source_order) && data.source_order.length === EMBED_SOURCES.length) {
-      EMBED_SOURCES = data.source_order;
-      populateSources();
+    if (!error && data && data.source_order && Array.isArray(data.source_order)) {
+      // Validate that each item has a 'name' and a 'url' function
+      const isValid = data.source_order.every(item => item && typeof item.name === 'string' && typeof item.url === 'function');
+      if (isValid && data.source_order.length === DEFAULT_SOURCES.length) {
+        EMBED_SOURCES = data.source_order;
+      } else {
+        console.warn('Invalid saved source order, using defaults');
+        EMBED_SOURCES = [...DEFAULT_SOURCES];
+      }
+    } else {
+      EMBED_SOURCES = [...DEFAULT_SOURCES];
     }
+    populateSources();
   }
   async function saveUserSourceOrder() {
     if (!currentUser) return;
-    await sb.from('user_settings').upsert({ id: currentUser.id, source_order: EMBED_SOURCES, updated_at: new Date().toISOString() });
+    // Make a deep copy of the sources (functions are fine)
+    const toSave = EMBED_SOURCES.map(src => ({ name: src.name, url: src.url }));
+    await sb.from('user_settings').upsert({ id: currentUser.id, source_order: toSave, updated_at: new Date().toISOString() });
   }
   function populateSources() {
     sourceSelect.innerHTML = '';
@@ -360,22 +365,27 @@
   function updateEmbedStream() {
     if (!currentMedia) return;
     const srcIdx = parseInt(sourceSelect.value);
+    if (isNaN(srcIdx) || !EMBED_SOURCES[srcIdx] || typeof EMBED_SOURCES[srcIdx].url !== 'function') {
+      console.error('Invalid source at index', srcIdx);
+      embedIframe.srcdoc = '<div class="error-message">❌ Invalid source selected</div>';
+      return;
+    }
     const src = EMBED_SOURCES[srcIdx];
     let url = '';
-    if (currentMedia.type === 'movie') {
-      url = src.url('movie', currentMedia.id, null, null);
-    } else {
-      url = src.url('tv', currentMedia.id, currentSeason, currentEpisode);
+    try {
+      if (currentMedia.type === 'movie') {
+        url = src.url('movie', currentMedia.id, null, null);
+      } else {
+        url = src.url('tv', currentMedia.id, currentSeason, currentEpisode);
+      }
+    } catch (err) {
+      console.error('Error generating URL:', err);
+      embedIframe.srcdoc = '<div class="error-message">❌ Failed to generate embed URL</div>';
+      return;
     }
     console.log('[PLAYER] Loading:', url);
     if (url && url !== 'undefined') {
       embedIframe.src = url;
-      // Set a timeout to detect black screen (if no error event)
-      setTimeout(() => {
-        if (embedIframe.src === url && !embedIframe.contentDocument) {
-          console.warn('Embed may not be loading – try another source');
-        }
-      }, 5000);
     } else {
       embedIframe.srcdoc = '<div class="error-message">❌ Invalid source URL. Please select a different source.</div>';
     }
@@ -404,7 +414,7 @@
       .from('watch_history')
       .upsert(record, { onConflict: 'user_id, media_type, tmdb_id' });
     if (error) console.error("Save error:", error);
-    else console.log("Saved progress:", currentProgressMinutes, "min, ep", episode);
+    else console.log("Saved:", currentProgressMinutes, "min, ep", episode);
   }
 
   async function loadProgress() {
@@ -429,7 +439,6 @@
       currentProgressMinutes = 0;
       progressMinutesInput.value = 0;
     }
-    console.log('Loaded progress for', currentMedia?.title, 'ep', currentEpisode);
   }
 
   async function deleteHistoryEntry(mediaType, tmdbId) {
@@ -496,7 +505,6 @@
         } else {
           const res = await fetchWithRetry(`https://api.themoviedb.org/3/tv/${item.tmdb_id}?api_key=${TMDB_API_KEY}`);
           const tv = await res.json();
-          // Pass the saved episode and progress
           await showDetails(tv, 'tv', item.progress_minutes, item.season_number, item.episode_number);
         }
       });
@@ -633,7 +641,6 @@
     
     if (type === 'tv') {
       tvControlsDiv.classList.remove('hidden');
-      // Use saved season/episode if provided
       if (savedSeason !== null && savedEpisode !== null) {
         currentSeason = savedSeason;
         currentEpisode = savedEpisode;
@@ -646,14 +653,13 @@
       tvControlsDiv.classList.add('hidden');
     }
     
-    // Set progress from saved value or load from DB
     if (savedProgress !== null) {
       currentProgressMinutes = savedProgress;
       progressMinutesInput.value = savedProgress;
     } else {
       await loadProgress();
     }
-    await saveProgressToDB(); // ensures DB row has latest season/episode
+    await saveProgressToDB();
     updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
