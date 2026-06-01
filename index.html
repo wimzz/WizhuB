@@ -10,6 +10,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
+    /* ========== NAVBAR ========== */
     .glass-nav {
       background: rgba(10, 12, 16, 0.85);
       backdrop-filter: blur(12px);
@@ -31,9 +32,7 @@
       align-items: center;
       gap: 0.5rem;
     }
-    .brand i {
-      font-size: 1.8rem;
-    }
+    .brand i { font-size: 1.8rem; }
     .brand span {
       font-size: 1.5rem;
       font-weight: 800;
@@ -43,6 +42,7 @@
       color: transparent;
       letter-spacing: 1px;
     }
+    /* Search bar */
     .search-wrapper {
       flex: 1 1 auto;
       min-width: 200px;
@@ -54,9 +54,7 @@
       top: 50%;
       transform: translateY(-50%);
       color: #9ca3af;
-      font-size: 0.9rem;
       pointer-events: none;
-      z-index: 1;
     }
     .search-input {
       width: 100%;
@@ -82,12 +80,15 @@
       border: none;
       color: #9ca3af;
       cursor: pointer;
-      font-size: 0.9rem;
       display: none;
-      transition: color 0.2s;
     }
-    .clear-search:hover {
-      color: #facc15;
+    .clear-search:hover { color: #facc15; }
+    /* Right side: OGList + Avatar container */
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
     }
     .nav-btn {
       background: transparent;
@@ -105,9 +106,13 @@
       background: #facc15;
       color: #0a0c10;
     }
+    /* User avatar + dropdown */
+    .avatar-wrapper {
+      position: relative;
+    }
     .user-avatar {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       background: #facc15;
       color: #0a0c10;
       border-radius: 50%;
@@ -115,15 +120,46 @@
       align-items: center;
       justify-content: center;
       font-weight: bold;
+      font-size: 1.2rem;
       text-transform: uppercase;
       cursor: pointer;
+      transition: transform 0.1s;
     }
-    .nav-right {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-shrink: 0;
+    .user-avatar:hover { transform: scale(1.02); }
+    /* Dropdown menu */
+    .avatar-dropdown {
+      position: absolute;
+      top: 48px;
+      right: 0;
+      background: #1e212b;
+      border: 1px solid #facc15;
+      border-radius: 0.75rem;
+      padding: 0.5rem;
+      min-width: 130px;
+      z-index: 60;
+      display: none;
+      flex-direction: column;
+      gap: 0.25rem;
+      backdrop-filter: blur(8px);
     }
+    .avatar-dropdown.show { display: flex; }
+    .dropdown-item {
+      background: transparent;
+      color: #e0e0e0;
+      border: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.85rem;
+      width: 100%;
+    }
+    .dropdown-item:hover {
+      background: #facc15;
+      color: #0a0c10;
+    }
+    /* Responsive: on mobile, stack elements */
     @media (max-width: 768px) {
       .glass-nav {
         flex-direction: column;
@@ -131,18 +167,17 @@
       }
       .search-wrapper {
         width: 100%;
-        order: 3;
-        margin-top: 0.5rem;
+        order: 2;
       }
       .nav-right {
-        order: 2;
+        order: 3;
         justify-content: flex-end;
       }
       .brand {
         order: 1;
       }
     }
-    /* Movie cards, player, etc. (unchanged from previous working version) */
+    /* Rest of the styles (movie cards, player, etc.) – identical to previous working version */
     .movie-card {
       transition: transform 0.25s ease, box-shadow 0.25s;
       cursor: pointer;
@@ -396,6 +431,7 @@
 </head>
 <body class="text-gray-200">
 
+<!-- NEW NAVBAR with avatar dropdown -->
 <nav class="glass-nav">
   <div class="brand">
     <i class="fas fa-crown text-yellow-400"></i>
@@ -410,9 +446,12 @@
   </div>
   <div class="nav-right">
     <a href="oglist.html" class="nav-btn" target="_self"><i class="fas fa-link mr-1"></i> OGList</a>
-    <div id="userContainer" class="hidden items-center gap-3">
+    <!-- Avatar with dropdown -->
+    <div id="userContainer" class="hidden avatar-wrapper">
       <div class="user-avatar" id="userAvatar">U</div>
-      <button id="logoutBtn" class="nav-btn">Logout</button>
+      <div id="avatarDropdown" class="avatar-dropdown">
+        <button id="dropdownLogoutBtn" class="dropdown-item">Logout</button>
+      </div>
     </div>
     <div id="authContainer" class="flex gap-2">
       <button id="showLoginBtn" class="nav-btn">Login</button>
@@ -573,7 +612,7 @@
   let currentTVDetails = null;
   let currentEpisodesList = [];
 
-  // DOM elements
+  // DOM elements (including new dropdown)
   const continueSection = document.getElementById('continueWatchingSection');
   const continueContainer = document.getElementById('continueWatchingContainer');
   const trendingMoviesGrid = document.getElementById('trendingMoviesGrid');
@@ -601,7 +640,9 @@
   const orderSourcesBtn = document.getElementById('orderSourcesBtn');
   const detailTitleSpan = document.getElementById('detailTitle');
   const copyTitleIcon = document.querySelector('.copy-title-icon');
-  const userAvatar = document.getElementById('userAvatar');
+  const userAvatarDiv = document.getElementById('userAvatar');
+  const avatarDropdown = document.getElementById('avatarDropdown');
+  const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 
   function showLoading(container) { container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>'; }
 
@@ -624,6 +665,20 @@
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => search(e.target.value), 500);
   }
+
+  // Avatar dropdown toggle
+  function toggleDropdown(e) {
+    e.stopPropagation();
+    avatarDropdown.classList.toggle('show');
+  }
+  function closeDropdown() {
+    avatarDropdown.classList.remove('show');
+  }
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.avatar-wrapper')) {
+      closeDropdown();
+    }
+  });
 
   // ================= ALL CORE FUNCTIONS (identical to previous working version) =================
   async function loadUserSourceOrder() {
