@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>WizhuB • One Card Per Show, Always Latest Episode</title>
+  <title>WizhuB • One Card Per Show (Always Latest Episode)</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -387,8 +387,6 @@
     if (error) console.error("Save error:", error);
     else {
       console.log("Saved:", currentProgressMinutes, "min for", currentMedia.title, "ep", episode);
-      // Refresh continue watching list to show updated episode
-      await renderContinueWatching();
     }
   }
 
@@ -499,7 +497,7 @@
     }
   }
 
-  // ================= TV EPISODE NAVIGATION (UPDATES SAME ROW) =================
+  // ================= TV EPISODE NAVIGATION =================
   async function updateEpisodeNavigation() {
     if (!currentMedia || currentMedia.type !== 'tv' || !currentEpisodesList.length) {
       prevEpisodeBtn.disabled = true;
@@ -517,11 +515,8 @@
     if (currentIndex > 0) {
       currentEpisode = currentEpisodesList[currentIndex - 1].episode_number;
       episodeSelect.value = currentEpisode;
-      // Update the database row with the new episode number (keep same progress minutes)
-      await saveProgressToDB();
-      // Refresh the Continue Watching list
-      await renderContinueWatching();
-      // Reload the embed
+      await saveProgressToDB();            // update DB with new episode
+      await renderContinueWatching();      // refresh continue watching immediately
       updateEmbedStream();
       updateEpisodeNavigation();
     }
@@ -561,7 +556,7 @@
       currentSeason = parseInt(seasonSelect.value);
       currentEpisode = 1;
       await loadEpisodes(tvId, currentSeason);
-      await saveProgressToDB();  // update season/episode in DB
+      await saveProgressToDB();
       await renderContinueWatching();
       updateEmbedStream();
       updateEpisodeNavigation();
@@ -796,6 +791,7 @@
   saveProgressBtn.onclick = async () => {
     currentProgressMinutes = parseInt(progressMinutesInput.value) || 0;
     await saveProgressToDB();
+    await renderContinueWatching();
   };
   prevEpisodeBtn.onclick = goToPreviousEpisode;
   nextEpisodeBtn.onclick = goToNextEpisode;
