@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB - Resume & Progress (Final Fix)</title>
+  <title>WIZHUB - Resume & Progress (Working)</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* (all styles kept identical – omitted for brevity, same as your original) */
+    /* All styles – same as before, kept for brevity */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
     .glass-nav {
@@ -729,8 +729,10 @@
       const card = document.createElement('div');
       card.className = 'movie-card relative';
       card.style.flex = '0 0 140px';
-      const progressPercent = Math.min((item.progress_minutes / 120) * 100, 100);
+      // Use progress_seconds for progress bar and minutes display
+      const progressPercent = Math.min(((item.progress_seconds || 0) / 7200) * 100, 100);
       let label = item.media_type === 'tv' ? `S${item.season_number}E${item.episode_number}` : 'Movie';
+      const minutesDisplay = Math.floor((item.progress_seconds || 0) / 60);
       card.innerHTML = `
         <div class="delete-btn" data-media-type="${item.media_type}" data-tmdb="${item.tmdb_id}">
           <i class="fas fa-trash-alt text-xs"></i>
@@ -738,7 +740,7 @@
         <img src="${poster}" class="w-full h-64 object-cover" loading="lazy">
         <div class="p-2">
           <div class="font-semibold text-sm truncate">${item.title}</div>
-          <div class="text-xs text-gray-400">${label} • ${item.progress_minutes} min</div>
+          <div class="text-xs text-gray-400">${label} • ${minutesDisplay} min</div>
         </div>
         <div class="progress-overlay" style="width: ${progressPercent}%;"></div>
       `;
@@ -908,15 +910,18 @@
     } catch (err) { alert('Could not copy URL'); }
   }
 
-  // ========== FIXED VixSrc POSTMESSAGE HANDLER (correct event structure) ==========
+  // ========== CORRECTED VixSrc POSTMESSAGE HANDLER ==========
   window.addEventListener("message", async (event) => {
     const { origin, data } = event;
 
     if (!origin.includes("vixsrc") && !origin.includes("vixcloud")) return;
 
+    // Log the full object to help debugging (remove once working)
+    console.log("VIXSRC EVENT FULL", JSON.stringify(data, null, 2));
+
     if (data?.type !== "PLAYER_EVENT") return;
 
-    // Actual structure: { type: "PLAYER_EVENT", event: { event: "seeked", data: { currentTime: 900 } } }
+    // Correct path: data.event.event and data.event.data.currentTime
     const playerEvent = data.event?.event;
     const currentTime = Math.floor(data.event?.data?.currentTime || 0);
 
