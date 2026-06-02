@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB - Resume & Progress (Fixed)</title>
+  <title>WIZHUB - Resume & Progress (Final)</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* (same styles as before - keep for brevity) */
+    /* (all styles remain the same – omitted for brevity, but you can keep your existing styles) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
     .glass-nav {
@@ -492,7 +492,7 @@
 
 <script>
 (function() {
-  // ================= SOURCES (FIXED VixSrc) =================
+  // ================= SOURCES (FIXED VixSrc resume parameter) =================
   const DEFAULT_SOURCES = [
     { name: 'Videasy', url: (type, id, s, e, progressSec) => {
         let base = type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}`;
@@ -507,7 +507,7 @@
     { name: 'VidUp', url: (type, id, s, e) => type === 'movie' ? `https://vidup.to/movie/${id}` : `https://vidup.to/tv/${id}/${s}/${e}` },
     { name: 'VixSrc', url: (type, id, s, e, progressSec) => {
         let base = type === 'movie' ? `https://vixsrc.to/movie/${id}` : `https://vixsrc.to/tv/${id}/${s}/${e}`;
-        // FIXED: correct parameter is startAt, not t
+        // FIXED: correct parameter is startAt
         return progressSec > 0 ? base + `?startAt=${progressSec}` : base;
       }
     },
@@ -548,7 +548,7 @@
   let currentProgressSeconds = 0;
   let currentTVDetails = null;
   let currentEpisodesList = [];
-  let watchHeartbeat = null;
+  let lastAutoSaveSeconds = 0; // for throttled auto-save
 
   // DOM elements
   const continueContainer = document.getElementById('continueWatchingContainer');
@@ -581,7 +581,7 @@
   const avatarDropdown = document.getElementById('avatarDropdown');
   const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 
-  // Helper functions
+  // Helper functions (unchanged from before)
   function updateContinueVisibility() {
     const query = globalSearch.value.trim();
     const continueSection = document.getElementById('continueWatchingSection');
@@ -654,39 +654,6 @@
       sourceSelect.appendChild(opt);
     });
     loadSelectedSourceIndex();
-  }
-
-  // Heartbeat auto-save every 15 seconds
-  function startHeartbeat() {
-    if (watchHeartbeat) clearInterval(watchHeartbeat);
-    watchHeartbeat = setInterval(async () => {
-      if (!currentUser || !currentMedia) return;
-      currentProgressSeconds += 15;
-      currentProgressMinutes = Math.floor(currentProgressSeconds / 60);
-      progressMinutesInput.value = currentProgressMinutes;
-      await saveProgressToDB();
-      console.log("Heartbeat saved", currentProgressSeconds, "seconds");
-    }, 15000);
-  }
-  function stopHeartbeat() {
-    if (watchHeartbeat) {
-      clearInterval(watchHeartbeat);
-      watchHeartbeat = null;
-    }
-  }
-
-  // ========== AUTO SAVE PROGRESS (looser threshold) ==========
-  let autoSaveTimer = null;
-  function autoSaveProgress(seconds, sourceName) {
-    if (!currentUser || !currentMedia) return;
-    // Only save if difference is more than 10 seconds (prevents excessive saves)
-    if (Math.abs(seconds - currentProgressSeconds) < 10) return;
-    currentProgressSeconds = seconds;
-    currentProgressMinutes = Math.floor(seconds / 60);
-    progressMinutesInput.value = currentProgressMinutes;
-    if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => { saveProgressToDB(); }, 1000);
-    console.log(`Auto-save from ${sourceName}: ${seconds} seconds`);
   }
 
   // ========== SAVE/LOAD PROGRESS ==========
@@ -794,7 +761,7 @@
     }
   }
 
-  // TV episode helpers
+  // TV episode helpers (unchanged)
   async function updateEpisodeNavigation() {
     if (!currentMedia || currentMedia.type !== 'tv' || !currentEpisodesList.length) {
       prevEpisodeBtn.disabled = true; nextEpisodeBtn.disabled = true; return;
@@ -900,7 +867,6 @@
       return;
     }
     let url = '';
-    // For sources that accept progressSec
     if (src.name === 'Videasy' || src.name === 'VidFast' || src.name === 'VixSrc') {
       url = src.url(currentMedia.type, currentMedia.id, currentSeason, currentEpisode, currentProgressSeconds);
     } else {
@@ -939,53 +905,52 @@
     } catch (err) { alert('Could not copy URL'); }
   }
 
-  // ========== POSTMESSAGE HANDLERS (FIXED VixSrc) ==========
-  window.addEventListener('message', (event) => {
+  // ========== IMPROVED VixSrc POSTMESSAGE HANDLER ==========
+  window.addEventListener("message", async (event) => {
     const { origin, data } = event;
-    if (!data) return;
 
-    // ---- Videasy (string message like {"progress": seconds}) ----
-    if (origin.includes('videasy') && typeof data === 'string') {
-      try {
-        const parsed = JSON.parse(data);
-        if (typeof parsed.progress === 'number') {
-          autoSaveProgress(parsed.progress, 'Videasy');
-        }
-      } catch(e) {}
-    }
+    // Accept both vixsrc.to and vixcloud.com
+    if (!origin.includes("vixsrc") && !origin.includes("vixcloud")) return;
 
-    // ---- VidFast (PLAYER_EVENT or MEDIA_DATA) ----
-    if (origin.includes('vidfast')) {
-      if (data.type === 'PLAYER_EVENT' && data.data?.currentTime) {
-        autoSaveProgress(Math.floor(data.data.currentTime), 'VidFast');
-      }
-      if (data.type === 'MEDIA_DATA') {
-        const media = data.data?.[currentMedia?.id];
-        if (media?.progress?.watched) {
-          autoSaveProgress(media.progress.watched, 'VidFast');
-        }
-      }
-    }
+    console.log("VIXSRC EVENT", origin, data);
 
-    // ---- VixSrc (FIXED: now checks event === "timeupdate") ----
-    if (origin.includes('vixsrc')) {
-      // Debug log to see what VixSrc sends
-      console.log('VIXSRC RAW EVENT', data);
-      if (data?.type === 'PLAYER_EVENT') {
-        const eventName = data.data?.event;
-        const currentTime = data.data?.currentTime;
-        if (eventName === 'timeupdate' && typeof currentTime === 'number') {
-          autoSaveProgress(Math.floor(currentTime), 'VixSrc');
-        }
-        // Also handle seek, pause, ended to capture final position
-        if (eventName === 'seeked' || eventName === 'pause' || eventName === 'ended') {
-          if (typeof currentTime === 'number') {
-            autoSaveProgress(Math.floor(currentTime), `VixSrc (${eventName})`);
-          }
-        }
-      }
+    if (data?.type !== "PLAYER_EVENT") return;
+
+    const playerEvent = data.data?.event;
+    const currentTime = Math.floor(data.data?.currentTime || 0);
+
+    if (currentTime <= 0) return;
+
+    switch (playerEvent) {
+      case "timeupdate":
+        // Update progress but don't save every time – let throttled timer do it
+        currentProgressSeconds = currentTime;
+        currentProgressMinutes = Math.floor(currentTime / 60);
+        progressMinutesInput.value = currentProgressMinutes;
+        console.log(`VixSrc timeupdate: ${currentTime}s`);
+        break;
+
+      case "pause":
+      case "seeked":
+      case "ended":
+        currentProgressSeconds = currentTime;
+        currentProgressMinutes = Math.floor(currentTime / 60);
+        progressMinutesInput.value = currentProgressMinutes;
+        await saveProgressToDB();
+        console.log(`Saved from VixSrc event: ${playerEvent}, ${currentTime}s`);
+        break;
     }
   });
+
+  // ========== THROTTLED AUTO-SAVE (every 5 sec if progress changed >=30 sec) ==========
+  setInterval(async () => {
+    if (!currentUser || !currentMedia) return;
+    if (Math.abs(currentProgressSeconds - lastAutoSaveSeconds) >= 30) {
+      lastAutoSaveSeconds = currentProgressSeconds;
+      await saveProgressToDB();
+      console.log("Auto-saved (throttled) at", currentProgressSeconds, "seconds");
+    }
+  }, 5000);
 
   // ========== SHOW DETAILS (with resume seconds) ==========
   async function showDetails(item, type, savedProgress = null, savedSeason = null, savedEpisode = null, savedSeconds = null) {
@@ -1023,13 +988,13 @@
     } else {
       await loadProgress();
     }
+    lastAutoSaveSeconds = currentProgressSeconds;
     await saveProgressToDB();
     await updateEmbedStream();
-    startHeartbeat();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // Card rendering
+  // Card rendering (unchanged)
   function renderCards(container, items, mediaType) {
     if (!items.length) { container.innerHTML = '<div class="col-span-full text-center text-gray-400">No results</div>'; return; }
     container.innerHTML = items.map(item => {
@@ -1144,7 +1109,6 @@
   // Event listeners
   closePlayerBtn.onclick = async () => {
     await saveProgressToDB();
-    stopHeartbeat();
     playerPanel.classList.add('hidden');
   };
   reloadEmbedBtn.onclick = () => updateEmbedStream();
@@ -1154,6 +1118,7 @@
   saveProgressBtn.onclick = async () => {
     currentProgressMinutes = parseInt(progressMinutesInput.value) || 0;
     currentProgressSeconds = currentProgressMinutes * 60;
+    lastAutoSaveSeconds = currentProgressSeconds;
     await saveProgressToDB();
     await renderContinueWatching();
   };
@@ -1164,7 +1129,6 @@
     await sb.auth.signOut();
     updateAuthUI();
     playerPanel.classList.add('hidden');
-    stopHeartbeat();
     closeDropdown();
   };
   function copyTitleToClipboard() {
