@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB - Resume & Progress (Final)</title>
+  <title>WIZHUB - Resume & Progress (Fixed)</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* (all styles remain the same – omitted for brevity, but you can keep your existing styles) */
+    /* All styles identical to your original – kept for brevity */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
     .glass-nav {
@@ -492,7 +492,7 @@
 
 <script>
 (function() {
-  // ================= SOURCES (FIXED VixSrc resume parameter) =================
+  // ================= SOURCES (with correct resume parameters) =================
   const DEFAULT_SOURCES = [
     { name: 'Videasy', url: (type, id, s, e, progressSec) => {
         let base = type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}`;
@@ -507,7 +507,6 @@
     { name: 'VidUp', url: (type, id, s, e) => type === 'movie' ? `https://vidup.to/movie/${id}` : `https://vidup.to/tv/${id}/${s}/${e}` },
     { name: 'VixSrc', url: (type, id, s, e, progressSec) => {
         let base = type === 'movie' ? `https://vixsrc.to/movie/${id}` : `https://vixsrc.to/tv/${id}/${s}/${e}`;
-        // FIXED: correct parameter is startAt
         return progressSec > 0 ? base + `?startAt=${progressSec}` : base;
       }
     },
@@ -548,7 +547,7 @@
   let currentProgressSeconds = 0;
   let currentTVDetails = null;
   let currentEpisodesList = [];
-  let lastAutoSaveSeconds = 0; // for throttled auto-save
+  let lastAutoSaveSeconds = 0;
 
   // DOM elements
   const continueContainer = document.getElementById('continueWatchingContainer');
@@ -581,7 +580,7 @@
   const avatarDropdown = document.getElementById('avatarDropdown');
   const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 
-  // Helper functions (unchanged from before)
+  // Helper functions (unchanged)
   function updateContinueVisibility() {
     const query = globalSearch.value.trim();
     const continueSection = document.getElementById('continueWatchingSection');
@@ -656,7 +655,7 @@
     loadSelectedSourceIndex();
   }
 
-  // ========== SAVE/LOAD PROGRESS ==========
+  // ========== SAVE/LOAD PROGRESS (with UI update) ==========
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -679,7 +678,11 @@
     console.log("SAVING", { title: currentMedia.title, seconds: currentProgressSeconds, season, episode });
     const { error } = await sb.from('watch_history').upsert(record, { onConflict: 'user_id, media_type, tmdb_id' });
     if (error) console.error("Save error:", error);
-    else console.log("Saved OK");
+    else {
+      console.log("Saved OK");
+      // Immediately update Continue Watching UI
+      await renderContinueWatching();
+    }
   }
 
   async function loadProgress() {
@@ -905,40 +908,32 @@
     } catch (err) { alert('Could not copy URL'); }
   }
 
-  // ========== IMPROVED VixSrc POSTMESSAGE HANDLER ==========
+  // ========== FIXED VixSrc POSTMESSAGE HANDLER (saves on seeked/pause/ended) ==========
   window.addEventListener("message", async (event) => {
     const { origin, data } = event;
 
-    // Accept both vixsrc.to and vixcloud.com
     if (!origin.includes("vixsrc") && !origin.includes("vixcloud")) return;
 
     console.log("VIXSRC EVENT", origin, data);
 
     if (data?.type !== "PLAYER_EVENT") return;
 
-    const playerEvent = data.data?.event;
-    const currentTime = Math.floor(data.data?.currentTime || 0);
+    // The event name may be in different places depending on the player version
+    const playerEvent = data.event?.event || data.data?.event;
+    const eventData = data.event?.data || data.data;
+    const currentTime = Math.floor(eventData?.currentTime || 0);
 
     if (currentTime <= 0) return;
 
-    switch (playerEvent) {
-      case "timeupdate":
-        // Update progress but don't save every time – let throttled timer do it
-        currentProgressSeconds = currentTime;
-        currentProgressMinutes = Math.floor(currentTime / 60);
-        progressMinutesInput.value = currentProgressMinutes;
-        console.log(`VixSrc timeupdate: ${currentTime}s`);
-        break;
+    // Update current progress
+    currentProgressSeconds = currentTime;
+    currentProgressMinutes = Math.floor(currentTime / 60);
+    progressMinutesInput.value = currentProgressMinutes;
 
-      case "pause":
-      case "seeked":
-      case "ended":
-        currentProgressSeconds = currentTime;
-        currentProgressMinutes = Math.floor(currentTime / 60);
-        progressMinutesInput.value = currentProgressMinutes;
-        await saveProgressToDB();
-        console.log(`Saved from VixSrc event: ${playerEvent}, ${currentTime}s`);
-        break;
+    // Save on seek, pause, or end
+    if (playerEvent === "seeked" || playerEvent === "pause" || playerEvent === "ended") {
+      await saveProgressToDB();
+      console.log(`Saved from VixSrc event: ${playerEvent}, ${currentTime}s`);
     }
   });
 
