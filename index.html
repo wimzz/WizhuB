@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB - Resume & Progress (Fixed)</title>
+  <title>WIZHUB - Resume & Progress (Final Fix)</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* All styles identical to your original – kept for brevity */
+    /* (all styles kept identical – omitted for brevity, same as your original) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
     .glass-nav {
@@ -492,7 +492,7 @@
 
 <script>
 (function() {
-  // ================= SOURCES (with correct resume parameters) =================
+  // ================= SOURCES =================
   const DEFAULT_SOURCES = [
     { name: 'Videasy', url: (type, id, s, e, progressSec) => {
         let base = type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}`;
@@ -548,6 +548,7 @@
   let currentTVDetails = null;
   let currentEpisodesList = [];
   let lastAutoSaveSeconds = 0;
+  let lastPositionForJump = 0;
 
   // DOM elements
   const continueContainer = document.getElementById('continueWatchingContainer');
@@ -655,7 +656,7 @@
     loadSelectedSourceIndex();
   }
 
-  // ========== SAVE/LOAD PROGRESS (with UI update) ==========
+  // ========== SAVE/LOAD PROGRESS ==========
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -680,8 +681,7 @@
     if (error) console.error("Save error:", error);
     else {
       console.log("Saved OK");
-      // Immediately update Continue Watching UI
-      await renderContinueWatching();
+      await renderContinueWatching(); // immediate UI update
     }
   }
 
@@ -908,46 +908,56 @@
     } catch (err) { alert('Could not copy URL'); }
   }
 
-  // ========== FIXED VixSrc POSTMESSAGE HANDLER (saves on seeked/pause/ended) ==========
+  // ========== FIXED VixSrc POSTMESSAGE HANDLER (correct event structure) ==========
   window.addEventListener("message", async (event) => {
     const { origin, data } = event;
 
     if (!origin.includes("vixsrc") && !origin.includes("vixcloud")) return;
 
-    console.log("VIXSRC EVENT", origin, data);
-
     if (data?.type !== "PLAYER_EVENT") return;
 
-    // The event name may be in different places depending on the player version
-    const playerEvent = data.event?.event || data.data?.event;
-    const eventData = data.event?.data || data.data;
-    const currentTime = Math.floor(eventData?.currentTime || 0);
+    // Actual structure: { type: "PLAYER_EVENT", event: { event: "seeked", data: { currentTime: 900 } } }
+    const playerEvent = data.event?.event;
+    const currentTime = Math.floor(data.event?.data?.currentTime || 0);
 
     if (currentTime <= 0) return;
 
-    // Update current progress
+    // Update local progress
     currentProgressSeconds = currentTime;
     currentProgressMinutes = Math.floor(currentTime / 60);
     progressMinutesInput.value = currentProgressMinutes;
 
-    // Save on seek, pause, or end
+    console.log(`VixSrc event: ${playerEvent}, time=${currentTime}s`);
+
+    // Save on seek, pause, end
     if (playerEvent === "seeked" || playerEvent === "pause" || playerEvent === "ended") {
       await saveProgressToDB();
-      console.log(`Saved from VixSrc event: ${playerEvent}, ${currentTime}s`);
+      console.log(`Saved after ${playerEvent}`);
     }
   });
 
-  // ========== THROTTLED AUTO-SAVE (every 5 sec if progress changed >=30 sec) ==========
+  // ========== FALLBACK: every 2 seconds, if position jumped >60 sec, save ==========
+  setInterval(async () => {
+    if (!currentUser || !currentMedia) return;
+    const diff = Math.abs(currentProgressSeconds - lastPositionForJump);
+    if (diff > 60) {
+      lastPositionForJump = currentProgressSeconds;
+      await saveProgressToDB();
+      console.log(`Fallback saved large jump: ${diff} sec`);
+    }
+  }, 2000);
+
+  // ========== THROTTLED AUTO-SAVE (every 10 sec, min 30 sec change) ==========
   setInterval(async () => {
     if (!currentUser || !currentMedia) return;
     if (Math.abs(currentProgressSeconds - lastAutoSaveSeconds) >= 30) {
       lastAutoSaveSeconds = currentProgressSeconds;
       await saveProgressToDB();
-      console.log("Auto-saved (throttled) at", currentProgressSeconds, "seconds");
+      console.log("Throttled auto-save at", currentProgressSeconds, "seconds");
     }
-  }, 5000);
+  }, 10000);
 
-  // ========== SHOW DETAILS (with resume seconds) ==========
+  // ========== SHOW DETAILS ==========
   async function showDetails(item, type, savedProgress = null, savedSeason = null, savedEpisode = null, savedSeconds = null) {
     playerPanel.classList.remove('hidden');
     const title = item.title || item.name;
@@ -984,6 +994,7 @@
       await loadProgress();
     }
     lastAutoSaveSeconds = currentProgressSeconds;
+    lastPositionForJump = currentProgressSeconds;
     await saveProgressToDB();
     await updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1073,7 +1084,7 @@
     }).catch(console.error);
   }
 
-  // Source order modal
+  // Source order modal (unchanged)
   function openOrderModal() {
     sourceListDiv.innerHTML = '';
     EMBED_SOURCES.forEach((src, idx) => {
@@ -1114,6 +1125,7 @@
     currentProgressMinutes = parseInt(progressMinutesInput.value) || 0;
     currentProgressSeconds = currentProgressMinutes * 60;
     lastAutoSaveSeconds = currentProgressSeconds;
+    lastPositionForJump = currentProgressSeconds;
     await saveProgressToDB();
     await renderContinueWatching();
   };
@@ -1148,7 +1160,7 @@
     await saveProgressToDB();
   });
 
-  // Login/signup modal handlers
+  // Login/signup modals
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
