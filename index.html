@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* ========== STYLES (fully responsive) ========== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
     .glass-nav {
@@ -492,12 +491,24 @@
 
 <script>
 (function() {
-  // ================= SOURCES (25 sources – same as before) =================
+  // ================= SOURCES (with proper resume parameters) =================
   const DEFAULT_SOURCES = [
-    { name: 'Videasy', url: (type, id, s, e) => type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}` },
-    { name: 'VidFast', url: (type, id, s, e) => type === 'movie' ? `https://vidfast.pro/movie/${id}?autoPlay=true` : `https://vidfast.pro/tv/${id}/${s}/${e}?autoPlay=true` },
+    { name: 'Videasy', url: (type, id, s, e, progressSec) => {
+        let base = type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}`;
+        return progressSec > 0 ? base + `?progress=${progressSec}` : base;
+      }
+    },
+    { name: 'VidFast', url: (type, id, s, e, progressSec) => {
+        let base = type === 'movie' ? `https://vidfast.pro/movie/${id}?autoPlay=true` : `https://vidfast.pro/tv/${id}/${s}/${e}?autoPlay=true`;
+        return progressSec > 0 ? base + `&t=${progressSec}` : base;
+      }
+    },
     { name: 'VidUp', url: (type, id, s, e) => type === 'movie' ? `https://vidup.to/movie/${id}` : `https://vidup.to/tv/${id}/${s}/${e}` },
-    { name: 'VixSrc', url: (type, id, s, e) => type === 'movie' ? `https://vixsrc.to/movie/${id}` : `https://vixsrc.to/tv/${id}/${s}/${e}` },
+    { name: 'VixSrc', url: (type, id, s, e, progressSec) => {
+        let base = type === 'movie' ? `https://vixsrc.to/movie/${id}` : `https://vixsrc.to/tv/${id}/${s}/${e}`;
+        return progressSec > 0 ? base + `?startAt=${progressSec}` : base;
+      }
+    },
     { name: 'EmbedMaster', url: (type, id, s, e) => type === 'movie' ? `https://embedmaster.link/movie/${id}` : `https://embedmaster.link/tv/${id}/${s}/${e}` },
     { name: 'ZxcStream', url: (type, id, s, e) => type === 'movie' ? `https://zxcstream.xyz/player/movie/${id}` : `https://zxcstream.xyz/player/tv/${id}/${s}/${e}` },
     { name: 'AnyEmbed', url: (type, id, s, e) => type === 'movie' ? `https://anyembed.xyz/embed/tmdb-movie-${id}` : `https://anyembed.xyz/embed/tmdb-tv-${id}-${s}-${e}` },
@@ -532,6 +543,7 @@
   let currentMedia = null;
   let currentSeason = 1, currentEpisode = 1;
   let currentProgressMinutes = 0;
+  let currentProgressSeconds = 0;
   let currentTVDetails = null;
   let currentEpisodesList = [];
 
@@ -567,7 +579,7 @@
   const avatarDropdown = document.getElementById('avatarDropdown');
   const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 
-  // Helper functions (search, avatar, source order – same as previous stable version)
+  // Helper functions (search, avatar, source order)
   function updateContinueVisibility() {
     const query = globalSearch.value.trim();
     if (query !== '') continueSection.classList.add('continue-section-hidden');
@@ -641,7 +653,7 @@
     loadSelectedSourceIndex();
   }
 
-  // ========== CORE: UPDATE EMBED WITH TIME PARAMETER ==========
+  // ========== CORE: UPDATE EMBED WITH SOURCE‑SPECIFIC TIME PARAMETER ==========
   async function updateEmbedStream() {
     if (!currentMedia) return;
     const srcIdx = parseInt(sourceSelect.value);
@@ -650,20 +662,20 @@
       embedIframe.srcdoc = '<div style="color:red;padding:2rem">Invalid source</div>';
       return;
     }
-    let url = src.url(currentMedia.type, currentMedia.id, currentSeason, currentEpisode);
+    let url = '';
+    // For sources that accept progressSec, pass it; others ignore.
+    if (src.name === 'Videasy' || src.name === 'VidFast' || src.name === 'VixSrc') {
+      url = src.url(currentMedia.type, currentMedia.id, currentSeason, currentEpisode, currentProgressSeconds);
+    } else {
+      url = src.url(currentMedia.type, currentMedia.id, currentSeason, currentEpisode);
+    }
     if (url && typeof url.then === 'function') {
       embedIframe.srcdoc = '<div class="text-center py-20 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
       try { url = await url; } catch (err) { embedIframe.srcdoc = '<div style="color:red;padding:2rem">Failed to load</div>'; return; }
     }
     if (src.openInNewTab === true && url) { window.open(url, '_blank'); return; }
-    if (url) {
-      // Add time parameter if progress > 0 (using query parameter &t= or ?t=)
-      if (currentProgressMinutes > 0 && !src.openInNewTab) {
-        const separator = url.includes('?') ? '&' : '?';
-        url += `${separator}t=${currentProgressMinutes * 60}`;
-      }
-      embedIframe.src = url;
-    } else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Invalid URL</div>';
+    if (url) embedIframe.src = url;
+    else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Invalid URL</div>';
   }
 
   function nextSource() {
@@ -688,13 +700,14 @@
     } catch (err) { alert('Could not copy URL'); }
   }
 
-  // ========== AUTO-PROGRESS SAVING (silent, works for Videasy, VidFast, VixSrc) ==========
+  // ========== AUTO-PROGRESS SAVING (using documented events) ==========
   let autoSaveTimer = null;
   function autoSaveProgress(seconds, sourceName) {
     if (!currentUser || !currentMedia) return;
     const minutes = Math.floor(seconds / 60);
     if (minutes === currentProgressMinutes) return;
     currentProgressMinutes = minutes;
+    currentProgressSeconds = seconds;
     progressMinutesInput.value = minutes;
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => { saveProgressToDB(); }, 1000);
@@ -709,28 +722,14 @@
     const { origin, data } = event;
     if (!data) return;
 
-    // ---- Videasy (string message like {"progress": 45} or PLAYER_EVENT) ----
-    if (origin.includes('videasy')) {
-      if (typeof data === 'string') {
-        try {
-          const parsed = JSON.parse(data);
-          if (typeof parsed.progress === 'number') {
-            // progress is in minutes, convert to seconds
-            autoSaveProgress(parsed.progress * 60, 'Videasy');
-          }
-        } catch(e) {}
-      }
-      if (data.type === 'PLAYER_EVENT' && data.data?.currentTime) {
-        autoSaveProgress(data.data.currentTime, 'Videasy');
-      }
-      if (data.type === 'MEDIA_DATA') {
-        // MEDIA_DATA contains progress in seconds under .progress.watched for the specific media
-        const mediaKey = `${currentMedia?.type}-${currentMedia?.id}`;
-        const mediaObj = data.data?.[mediaKey];
-        if (mediaObj?.progress?.watched) {
-          autoSaveProgress(mediaObj.progress.watched, 'Videasy');
+    // ---- Videasy (string message like {"progress": seconds}) ----
+    if (origin.includes('videasy') && typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        if (typeof parsed.progress === 'number') {
+          autoSaveProgress(parsed.progress, 'Videasy');
         }
-      }
+      } catch(e) {}
     }
 
     // ---- VidFast (PLAYER_EVENT or MEDIA_DATA) ----
@@ -781,12 +780,13 @@
       .eq('user_id', currentUser.id).eq('media_type', currentMedia.type).eq('tmdb_id', currentMedia.id).maybeSingle();
     if (!error && data) {
       currentProgressMinutes = data.progress_minutes || 0;
+      currentProgressSeconds = currentProgressMinutes * 60;
       progressMinutesInput.value = currentProgressMinutes;
       if (currentMedia.type === 'tv' && data.season_number && data.episode_number) {
         currentSeason = data.season_number;
         currentEpisode = data.episode_number;
       }
-    } else { currentProgressMinutes = 0; progressMinutesInput.value = 0; }
+    } else { currentProgressMinutes = 0; currentProgressSeconds = 0; progressMinutesInput.value = 0; }
   }
 
   async function deleteHistoryEntry(mediaType, tmdbId) {
@@ -960,10 +960,13 @@
       } else { currentSeason = 1; currentEpisode = 1; }
       await loadTVSeasons(item.id, true, currentSeason, currentEpisode);
     } else tvControlsDiv.classList.add('hidden');
-    if (savedProgress !== null) { currentProgressMinutes = savedProgress; progressMinutesInput.value = savedProgress; }
-    else await loadProgress();
+    if (savedProgress !== null) {
+      currentProgressMinutes = savedProgress;
+      currentProgressSeconds = savedProgress * 60;
+      progressMinutesInput.value = savedProgress;
+    } else await loadProgress();
     await saveProgressToDB();
-    await updateEmbedStream(); // will add ?t=seconds if progress > 0
+    await updateEmbedStream(); // will add ?progress= or &t= or ?startAt=
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -1087,6 +1090,7 @@
   copyUrlBtn.onclick = copyVideoUrl;
   saveProgressBtn.onclick = async () => {
     currentProgressMinutes = parseInt(progressMinutesInput.value) || 0;
+    currentProgressSeconds = currentProgressMinutes * 60;
     await saveProgressToDB();
     await renderContinueWatching();
   };
@@ -1117,7 +1121,7 @@
   globalSearch.addEventListener('focus', updateContinueVisibility);
   globalSearch.addEventListener('blur', () => { setTimeout(() => { if (!globalSearch.value.trim()) updateContinueVisibility(); }, 200); });
 
-  // Login/signup modal handlers (unchanged)
+  // Login/signup modal handlers
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
