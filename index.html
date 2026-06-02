@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB – Resume from Continue Watching (Protected)</title>
+  <title>WIZHUB – Resume & Auto‑Save (Login Only)</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -101,6 +101,16 @@
     .nav-btn:hover {
       background: #facc15;
       color: #0a0c10;
+    }
+    .nav-btn-disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      border-color: gray;
+      color: gray;
+    }
+    .nav-btn-disabled:hover {
+      background: transparent;
+      color: gray;
     }
     .avatar-wrapper { position: relative; }
     .user-avatar {
@@ -422,7 +432,7 @@
     </div>
     <div id="authContainer" class="flex gap-2">
       <button id="showLoginBtn" class="nav-btn">Login</button>
-      <button id="showSignupBtn" class="nav-btn bg-yellow-500 text-black border-yellow-500 hover:bg-yellow-400">Sign up</button>
+      <button id="showSignupBtn" class="nav-btn nav-btn-disabled" disabled style="opacity:0.6; cursor:not-allowed;" title="Registration temporarily closed">Sign up (Closed)</button>
     </div>
   </div>
 </nav>
@@ -488,12 +498,12 @@
 </main>
 
 <div id="orderModal" class="modal"><div class="modal-content"><h3 class="text-xl font-bold mb-4">Reorder Stream Sources</h3><div id="sourceList" class="mb-4" style="max-height: 50vh; overflow-y: auto;"></div><div class="flex gap-2"><button id="saveOrderBtn" class="bg-green-600 px-4 py-2 rounded-full">Save Order</button><button id="closeOrderBtn" class="bg-gray-600 px-4 py-2 rounded-full">Cancel</button></div></div></div>
-<div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden"><div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative"><h3 class="text-xl font-bold mb-4">Login</h3><input type="email" id="loginEmail" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-3"><input type="password" id="loginPassword" placeholder="Password" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-4"><button id="doLoginBtn" class="w-full bg-yellow-500 text-black py-2 rounded-lg font-semibold">Login</button><p class="text-sm text-center mt-3">No account? <a id="switchToSignupModal" class="text-yellow-400 cursor-pointer">Sign up</a></p><button class="closeModal absolute top-2 right-4 text-gray-400 text-2xl">&times;</button></div></div>
-<div id="signupModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden"><div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative"><h3 class="text-xl font-bold mb-4">Create Account</h3><input type="email" id="signupEmail" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-3"><input type="password" id="signupPassword" placeholder="Password (min 6)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-4"><button id="doSignupBtn" class="w-full bg-yellow-500 text-black py-2 rounded-lg font-semibold">Sign Up</button><p class="text-sm text-center mt-3">Already have an account? <a id="switchToLoginModal" class="text-yellow-400 cursor-pointer">Login</a></p><button class="closeModal absolute top-2 right-4 text-gray-400 text-2xl">&times;</button></div></div>
+<div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden"><div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative"><h3 class="text-xl font-bold mb-4">Login</h3><input type="email" id="loginEmail" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-3"><input type="password" id="loginPassword" placeholder="Password" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-4"><button id="doLoginBtn" class="w-full bg-yellow-500 text-black py-2 rounded-lg font-semibold">Login</button><p class="text-sm text-center mt-3 text-gray-400">New registrations are currently closed.</p><button class="closeModal absolute top-2 right-4 text-gray-400 text-2xl">&times;</button></div></div>
+<!-- Signup modal removed entirely -->
 
 <script>
 (function() {
-  // ================= SOURCES (correct resume parameters) =================
+  // ================= SOURCES =================
   const DEFAULT_SOURCES = [
     { name: 'Videasy', url: (type, id, s, e, progressSec) => {
         let base = type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}`;
@@ -552,9 +562,9 @@
   let lastVidFastSave = 0;
   let lastVixSrcSaved = 0;
 
-  // ========== PROTECTION AGAINST PLAYER OVERWRITING SAVED PROGRESS ==========
-  let ignoreAutoSaveUntil = 0;        // timestamp (ms) until which auto-save is ignored
-  let ignoreEventCount = 0;           // number of events to ignore after load (as fallback)
+  // Protection: ignore auto-save for 10 seconds or 10 events after loading
+  let ignoreAutoSaveUntil = 0;
+  let ignoreEventCount = 0;
 
   // DOM elements
   const continueContainer = document.getElementById('continueWatchingContainer');
@@ -915,15 +925,14 @@
     } catch (err) { alert('Could not copy URL'); }
   }
 
-  // ========== AUTO-SAVE WITH PROTECTION AGAINST INITIAL OVERWRITE ==========
+  // ========== AUTO-SAVE WITH 10‑SECOND PROTECTION ==========
   let autoSaveTimer = null;
   function autoSaveProgress(seconds, sourceName) {
     if (!currentUser || !currentMedia) return;
-    // Ignore auto-save during the first 5 seconds or first 5 events (whichever comes first)
     const now = Date.now();
     if (now < ignoreAutoSaveUntil || ignoreEventCount > 0) {
       if (ignoreEventCount > 0) ignoreEventCount--;
-      console.log(`Auto-save IGNORED (protection active): ${sourceName} ${seconds}s`);
+      console.log(`Auto-save IGNORED (protection active, ${ignoreEventCount} events left): ${sourceName} ${seconds}s`);
       return;
     }
     if (Math.abs(seconds - currentProgressSeconds) < 1) return;
@@ -1065,7 +1074,7 @@
     }
   }, 2000);
 
-  // ========== SHOW DETAILS (resume logic with protection) ==========
+  // ========== SHOW DETAILS (with 10-second protection) ==========
   async function showDetails(item, type, savedProgress = null, savedSeason = null, savedEpisode = null, savedSeconds = null) {
     playerPanel.classList.remove('hidden');
     const title = item.title || item.name;
@@ -1101,13 +1110,13 @@
     } else {
       await loadProgress();
     }
-    // Activate protection for 5 seconds or 5 events
-    ignoreAutoSaveUntil = Date.now() + 5000;
-    ignoreEventCount = 5;
+    // Activate protection for 10 seconds or 10 events
+    ignoreAutoSaveUntil = Date.now() + 10000;
+    ignoreEventCount = 10;
     lastPositionForJump = currentProgressSeconds;
     lastVidFastSave = currentProgressSeconds;
     lastVixSrcSaved = currentProgressSeconds;
-    await saveProgressToDB();  // ensure DB has the saved time
+    await saveProgressToDB();
     await updateEmbedStream();
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1175,7 +1184,7 @@
   }
   function showLoading(container) { container.innerHTML = '<div class="col-span-full flex justify-center py-10"><div class="loading-spinner"></div><span class="ml-2">Loading...</span></div>'; }
 
-  // Auth UI
+  // Auth UI (modified: signup button disabled)
   function updateAuthUI() {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       currentUser = user;
@@ -1273,14 +1282,10 @@
     await saveProgressToDB();
   });
 
-  // Login/signup modal handlers
+  // Login modal only (no signup)
   const loginModal = document.getElementById('loginModal');
-  const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
-  document.getElementById('showSignupBtn').onclick = () => signupModal.classList.remove('hidden');
-  document.querySelectorAll('.closeModal').forEach(btn => btn.onclick = () => { loginModal.classList.add('hidden'); signupModal.classList.add('hidden'); orderModal.style.display = 'none'; });
-  document.getElementById('switchToSignupModal').onclick = () => { loginModal.classList.add('hidden'); signupModal.classList.remove('hidden'); };
-  document.getElementById('switchToLoginModal').onclick = () => { signupModal.classList.add('hidden'); loginModal.classList.remove('hidden'); };
+  document.querySelectorAll('.closeModal').forEach(btn => btn.onclick = () => { loginModal.classList.add('hidden'); orderModal.style.display = 'none'; });
   document.getElementById('doLoginBtn').onclick = async () => {
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPassword').value;
@@ -1288,13 +1293,7 @@
     if (error) alert(error.message);
     else { loginModal.classList.add('hidden'); updateAuthUI(); }
   };
-  document.getElementById('doSignupBtn').onclick = async () => {
-    const email = document.getElementById('signupEmail').value;
-    const pass = document.getElementById('signupPassword').value;
-    const { error } = await sb.auth.signUp({ email, password: pass });
-    if (error) alert(error.message);
-    else { alert('Account created! Please log in.'); signupModal.classList.add('hidden'); }
-  };
+  // No signup logic
 
   // Initialize
   populateSources();
