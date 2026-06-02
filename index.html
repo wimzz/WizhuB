@@ -383,30 +383,41 @@
     .continue-section-hidden {
       display: none !important;
     }
+    .toast-notification {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2a2c38;
+      color: #facc15;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 14px;
+      z-index: 300;
+      animation: fadeOut 2s forwards;
+    }
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      70% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
   </style>
 </head>
 <body class="text-gray-200">
 
 <!-- NAVBAR (unchanged) -->
 <nav class="glass-nav">
-  <div class="brand">
-    <i class="fas fa-crown text-yellow-400"></i>
-    <span>WIZHUB</span>
-  </div>
+  <div class="brand"><i class="fas fa-crown text-yellow-400"></i><span>WIZHUB</span></div>
   <div class="search-wrapper">
     <i class="fas fa-search search-icon"></i>
     <input type="text" id="globalSearch" placeholder="Search movies or TV shows..." class="search-input" autocomplete="off">
-    <button id="clearSearchBtn" class="clear-search" aria-label="Clear search">
-      <i class="fas fa-times-circle"></i>
-    </button>
+    <button id="clearSearchBtn" class="clear-search" aria-label="Clear search"><i class="fas fa-times-circle"></i></button>
   </div>
   <div class="nav-right">
     <a href="oglist.html" class="nav-btn" target="_self"><i class="fas fa-link mr-1"></i> OGList</a>
     <div id="userContainer" class="hidden avatar-wrapper">
       <div class="user-avatar" id="userAvatar">U</div>
-      <div id="avatarDropdown" class="avatar-dropdown">
-        <button id="dropdownLogoutBtn" class="dropdown-item">Logout</button>
-      </div>
+      <div id="avatarDropdown" class="avatar-dropdown"><button id="dropdownLogoutBtn" class="dropdown-item">Logout</button></div>
     </div>
     <div id="authContainer" class="flex gap-2">
       <button id="showLoginBtn" class="nav-btn">Login</button>
@@ -416,17 +427,13 @@
 </nav>
 
 <main class="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
-  <!-- Continue Watching -->
   <section id="continueWatchingSection" class="mb-12">
     <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4"><i class="fas fa-history text-yellow-400"></i> Continue Watching</h2>
     <div id="continueWatchingContainer" class="horizontal-scroll"><div class="text-gray-400 text-sm">Log in to see your watch history.</div></div>
   </section>
 
-  <!-- Player Panel -->
   <div id="playerPanel" class="hidden mb-12 player-modern">
-    <div class="embed-container">
-      <iframe id="embedIframe" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
-    </div>
+    <div class="embed-container"><iframe id="embedIframe" allowfullscreen referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe></div>
     <div class="info-section">
       <div id="tvControls" class="hidden mb-4">
         <div class="control-group flex flex-wrap items-center justify-between gap-3">
@@ -451,7 +458,6 @@
             <button id="orderSourcesBtn" class="btn-icon" title="Reorder sources"><i class="fas fa-arrows-alt"></i> Order</button>
           </div>
         </div>
-        <!-- Manual progress (keep for fallback) -->
         <div class="control-group flex flex-wrap items-center gap-4">
           <span class="text-sm"><i class="fas fa-clock text-yellow-400"></i> Watched (minutes):</span>
           <input type="number" id="progressMinutes" value="0" step="1" min="0" class="progress-input">
@@ -459,17 +465,10 @@
         </div>
       </div>
       <div class="info-row">
-        <div class="poster-col">
-          <div class="poster-wrapper rounded-xl shadow-lg">
-            <img id="detailPoster" src="https://placehold.co/300x450" alt="poster">
-          </div>
-        </div>
+        <div class="poster-col"><div class="poster-wrapper rounded-xl shadow-lg"><img id="detailPoster" src="https://placehold.co/300x450" alt="poster"></div></div>
         <div class="details-col">
           <div class="flex justify-between items-start flex-wrap gap-2">
-            <div class="title-wrapper">
-              <h2 id="detailTitle" class="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent cursor-pointer" title="Click to copy title"></h2>
-              <i class="fas fa-copy copy-title-icon" title="Copy title to clipboard"></i>
-            </div>
+            <div class="title-wrapper"><h2 id="detailTitle" class="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent cursor-pointer" title="Click to copy title"></h2><i class="fas fa-copy copy-title-icon" title="Copy title to clipboard"></i></div>
             <button id="closePlayerBtn" class="text-gray-400 hover:text-white text-xl">&times;</button>
           </div>
           <div class="flex flex-wrap items-center gap-3 mt-2">
@@ -483,19 +482,18 @@
     </div>
   </div>
 
-  <!-- Trending sections -->
   <section class="mb-12"><h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-fire text-orange-500"></i> Trending Movies</h2><div id="trendingMoviesGrid" class="trending-grid"></div></section>
   <section class="mb-12"><h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mb-5"><i class="fas fa-tv text-purple-400"></i> Trending TV Shows</h2><div id="trendingTvGrid" class="trending-grid"></div></section>
 </main>
 
-<!-- Modals -->
+<!-- Modals (unchanged) -->
 <div id="orderModal" class="modal"><div class="modal-content"><h3 class="text-xl font-bold mb-4">Reorder Stream Sources</h3><div id="sourceList" class="mb-4" style="max-height: 50vh; overflow-y: auto;"></div><div class="flex gap-2"><button id="saveOrderBtn" class="bg-green-600 px-4 py-2 rounded-full">Save Order</button><button id="closeOrderBtn" class="bg-gray-600 px-4 py-2 rounded-full">Cancel</button></div></div></div>
 <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden"><div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative"><h3 class="text-xl font-bold mb-4">Login</h3><input type="email" id="loginEmail" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-3"><input type="password" id="loginPassword" placeholder="Password" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-4"><button id="doLoginBtn" class="w-full bg-yellow-500 text-black py-2 rounded-lg font-semibold">Login</button><p class="text-sm text-center mt-3">No account? <a id="switchToSignupModal" class="text-yellow-400 cursor-pointer">Sign up</a></p><button class="closeModal absolute top-2 right-4 text-gray-400 text-2xl">&times;</button></div></div>
 <div id="signupModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden"><div class="bg-gray-900 rounded-2xl p-6 w-11/12 max-w-md border border-yellow-500/30 relative"><h3 class="text-xl font-bold mb-4">Create Account</h3><input type="email" id="signupEmail" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-3"><input type="password" id="signupPassword" placeholder="Password (min 6)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 mb-4"><button id="doSignupBtn" class="w-full bg-yellow-500 text-black py-2 rounded-lg font-semibold">Sign Up</button><p class="text-sm text-center mt-3">Already have an account? <a id="switchToLoginModal" class="text-yellow-400 cursor-pointer">Login</a></p><button class="closeModal absolute top-2 right-4 text-gray-400 text-2xl">&times;</button></div></div>
 
 <script>
 (function() {
-  // ================= SOURCES (25, same as before) =================
+  // ================= SOURCES (25 sources, same as before) =================
   const DEFAULT_SOURCES = [
     { name: 'Videasy', url: (type, id, s, e) => type === 'movie' ? `https://player.videasy.net/movie/${id}` : `https://player.videasy.net/tv/${id}/${s}/${e}` },
     { name: 'VidFast', url: (type, id, s, e) => type === 'movie' ? `https://vidfast.pro/movie/${id}?autoPlay=true` : `https://vidfast.pro/tv/${id}/${s}/${e}?autoPlay=true` },
@@ -570,7 +568,7 @@
   const avatarDropdown = document.getElementById('avatarDropdown');
   const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 
-  // Helper functions (search, avatar, source order – same as before)
+  // Helper functions (search, avatar, source order – identical to previous stable version)
   function updateContinueVisibility() {
     const query = globalSearch.value.trim();
     if (query !== '') continueSection.classList.add('continue-section-hidden');
@@ -644,7 +642,7 @@
     loadSelectedSourceIndex();
   }
 
-  // ========== CORE: EMBED UPDATE WITH TIME PARAMETER ==========
+  // ========== CORE: EMBED UPDATE WITH HASH FRAGMENT FOR RESUME ==========
   async function updateEmbedStream() {
     if (!currentMedia) return;
     const srcIdx = parseInt(sourceSelect.value);
@@ -660,9 +658,11 @@
     }
     if (src.openInNewTab === true && url) { window.open(url, '_blank'); return; }
     if (url) {
+      // Use hash fragment #t=seconds for resume (more widely supported)
       if (currentProgressMinutes > 0 && !src.openInNewTab) {
-        const separator = url.includes('?') ? '&' : '?';
-        url += `${separator}t=${currentProgressMinutes * 60}`;
+        // Remove any existing hash
+        url = url.split('#')[0];
+        url += `#t=${currentProgressMinutes * 60}`;
       }
       embedIframe.src = url;
     } else embedIframe.srcdoc = '<div style="color:red;padding:2rem">Invalid URL</div>';
@@ -690,7 +690,7 @@
     } catch (err) { alert('Could not copy URL'); }
   }
 
-  // ========== AUTO-PROGRESS (silent) ==========
+  // ========== AUTO-PROGRESS (silent, no toast) ==========
   let autoSaveTimer = null;
   function autoSaveProgress(seconds) {
     if (!currentUser || !currentMedia) return;
@@ -699,7 +699,7 @@
     currentProgressMinutes = minutes;
     progressMinutesInput.value = minutes;
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => { saveProgressToDB(); }, 1000); // no toast
+    autoSaveTimer = setTimeout(() => { saveProgressToDB(); }, 1000);
   }
 
   const vidFastOrigins = [
@@ -726,7 +726,7 @@
     if (origin.includes('vixsrc') && data.type === 'PLAYER_EVENT' && data.data?.currentTime) autoSaveProgress(data.data.currentTime);
   });
 
-  // ========== DATABASE & WATCH HISTORY ==========
+  // ========== DATABASE & WATCH HISTORY (unchanged) ==========
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -818,7 +818,7 @@
     }
   }
 
-  // Episode navigation (identical to previous, simplified)
+  // TV episode navigation (same as before)
   async function updateEpisodeNavigation() {
     if (!currentMedia || currentMedia.type !== 'tv' || !currentEpisodesList.length) {
       prevEpisodeBtn.disabled = true; nextEpisodeBtn.disabled = true; return;
@@ -937,11 +937,11 @@
     if (savedProgress !== null) { currentProgressMinutes = savedProgress; progressMinutesInput.value = savedProgress; }
     else await loadProgress();
     await saveProgressToDB();
-    await updateEmbedStream();
+    await updateEmbedStream();  // will add #t=seconds if progress > 0
     playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // Card rendering
+  // Card rendering (same)
   function renderCards(container, items, mediaType) {
     if (!items.length) { container.innerHTML = '<div class="col-span-full text-center text-gray-400">No results</div>'; return; }
     container.innerHTML = items.map(item => {
@@ -1091,7 +1091,7 @@
   globalSearch.addEventListener('focus', updateContinueVisibility);
   globalSearch.addEventListener('blur', () => { setTimeout(() => { if (!globalSearch.value.trim()) updateContinueVisibility(); }, 200); });
 
-  // Modal handlers (login/signup)
+  // Login/signup modal handlers
   const loginModal = document.getElementById('loginModal');
   const signupModal = document.getElementById('signupModal');
   document.getElementById('showLoginBtn').onclick = () => loginModal.classList.remove('hidden');
