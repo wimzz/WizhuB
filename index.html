@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB – Admin Default Order (Global) + Local Backup</title>
+  <title>WIZHUB – Fixed Source Order for Non‑Logged Users</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* All styles unchanged – same as fully working version */
+    /* All styles unchanged (same as fully working version) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
     .glass-nav {
@@ -518,43 +518,90 @@
         return progressSec > 0 ? base + `&t=${progressSec}` : base;
       }
     },
+    { name: 'VidUp', url: (type, id, s, e) => type === 'movie' ? `https://vidup.to/movie/${id}` : `https://vidup.to/tv/${id}/${s}/${e}` },
+    { name: 'VidCore', url: (type, id, s, e) => type === 'movie' ? `https://vidcore.net/movie/${id}` : `https://vidcore.net/tv/${id}/${s}/${e}` },
+    { name: 'VidLink', url: (type, id, s, e) => type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${s}/${e}` },
+    { name: '111Movies', url: (type, id, s, e) => type === 'movie' ? `https://111movies.net/movie/${id}` : `https://111movies.net/tv/${id}/${s}/${e}` },
+    { name: 'EmbedMaster', url: (type, id, s, e) => type === 'movie' ? `https://embedmaster.link/movie/${id}` : `https://embedmaster.link/tv/${id}/${s}/${e}` },
+    { name: 'ZxcStream', url: (type, id, s, e) => type === 'movie' ? `https://zxcstream.xyz/player/movie/${id}` : `https://zxcstream.xyz/player/tv/${id}/${s}/${e}` },
+    { name: 'AnyEmbed', url: (type, id, s, e) => type === 'movie' ? `https://anyembed.xyz/embed/tmdb-movie-${id}` : `https://anyembed.xyz/embed/tmdb-tv-${id}-${s}-${e}` },
+    { name: 'Peachify', url: (type, id, s, e) => type === 'movie' ? `https://peachify.top/embed/movie/${id}` : `https://peachify.top/embed/tv/${id}/${s}/${e}` },
+    { name: 'FilmU', url: (type, id, s, e) => type === 'movie' ? `https://embed.filmu.in/movie/${id}` : `https://embed.filmu.in/tv/${id}/${s}/${e}` },
+    { name: 'Nxsha', url: (type, id, s, e) => type === 'movie' ? `https://web.nxsha.app/embed/movie/${id}` : `https://web.nxsha.app/embed/tv/${id}/${s}/${e}` },
     { name: 'NHD API', url: (type, id, s, e) => {
         return type === 'movie' ? `https://nhdapi.com/embed/movie/${id}` : `https://nhdapi.com/embed/tv/${id}/${s}/${e}`;
+      }
+    },
+    { name: 'Vidsrc', url: (type, id, s, e) => type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
+    { name: 'VAPlayer', url: (type, id, s, e) => type === 'movie' ? `https://vaplayer.ru/embed/movie/${id}` : `https://vaplayer.ru/embed/tv/${id}/${s}/${e}` },
+    { name: 'VidRock', url: (type, id, s, e) => type === 'movie' ? `https://vidrock.ru/movie/${id}` : `https://vidrock.ru/tv/${id}/${s}/${e}` },
+    { name: 'Vidzee', url: (type, id, s, e) => type === 'movie' ? `https://player.vidzee.wtf/v2/embed/movie/${id}` : `https://player.vidzee.wtf/v2/embed/tv/${id}/${s}/${e}` },
+    { name: 'Cinezo', url: (type, id, s, e) => type === 'movie' ? `https://player.cinezo.live/embed/movie/${id}` : `https://player.cinezo.live/embed/tv/${id}/${s}/${e}` },
+    { name: '1Embed', url: (type, id, s, e) => type === 'movie' ? `https://1embed.cc/embed/movie/${id}` : `https://1embed.cc/embed/tv/${id}/${s}/${e}` },
+    { name: '2Embed', url: (type, id, s, e) => {
+        if (type === 'movie') return `https://www.2embed.cc/embed/${id}`;
+        else return `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`;
       }
     },
     { name: 'NontonGo', url: (type, id, s, e) => {
         return type === 'movie' ? `https://www.NontonGo.win/embed/movie/${id}` : `https://www.NontonGo.win/embed/tv/${id}/${s}/${e}`;
       }
     },
-    { name: '2Embed', url: (type, id, s, e) => {
-        if (type === 'movie') return `https://www.2embed.cc/embed/${id}`;
-        else return `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`;
-      }
-    },
-    { name: 'VidUp', url: (type, id, s, e) => type === 'movie' ? `https://vidup.to/movie/${id}` : `https://vidup.to/tv/${id}/${s}/${e}` },
-    { name: 'EmbedMaster', url: (type, id, s, e) => type === 'movie' ? `https://embedmaster.link/movie/${id}` : `https://embedmaster.link/tv/${id}/${s}/${e}` },
-    { name: 'ZxcStream', url: (type, id, s, e) => type === 'movie' ? `https://zxcstream.xyz/player/movie/${id}` : `https://zxcstream.xyz/player/tv/${id}/${s}/${e}` },
-    { name: 'AnyEmbed', url: (type, id, s, e) => type === 'movie' ? `https://anyembed.xyz/embed/tmdb-movie-${id}` : `https://anyembed.xyz/embed/tmdb-tv-${id}-${s}-${e}` },
-    { name: '111Movies', url: (type, id, s, e) => type === 'movie' ? `https://111movies.net/movie/${id}` : `https://111movies.net/tv/${id}/${s}/${e}` },
-    { name: 'Vidsrc', url: (type, id, s, e) => type === 'movie' ? `https://vidsrc.to/embed/movie/${id}` : `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
-    { name: 'VidCore', url: (type, id, s, e) => type === 'movie' ? `https://vidcore.net/movie/${id}` : `https://vidcore.net/tv/${id}/${s}/${e}` },
-    { name: 'VAPlayer', url: (type, id, s, e) => type === 'movie' ? `https://vaplayer.ru/embed/movie/${id}` : `https://vaplayer.ru/embed/tv/${id}/${s}/${e}` },
-    { name: 'Peachify', url: (type, id, s, e) => type === 'movie' ? `https://peachify.top/embed/movie/${id}` : `https://peachify.top/embed/tv/${id}/${s}/${e}` },
-    { name: 'FilmU', url: (type, id, s, e) => type === 'movie' ? `https://embed.filmu.in/movie/${id}` : `https://embed.filmu.in/tv/${id}/${s}/${e}` },
-    { name: 'Nxsha', url: (type, id, s, e) => type === 'movie' ? `https://web.nxsha.app/embed/movie/${id}` : `https://web.nxsha.app/embed/tv/${id}/${s}/${e}` },
-    { name: 'VidRock', url: (type, id, s, e) => type === 'movie' ? `https://vidrock.ru/movie/${id}` : `https://vidrock.ru/tv/${id}/${s}/${e}` },
-    { name: 'Cinezo', url: (type, id, s, e) => type === 'movie' ? `https://player.cinezo.live/embed/movie/${id}` : `https://player.cinezo.live/embed/tv/${id}/${s}/${e}` },
     { name: 'Xpass', url: (type, id, s, e) => type === 'movie' ? `https://play.xpass.top/e/movie/${id}` : `https://play.xpass.top/e/tv/${id}/${s}/${e}` },
-    { name: '1Embed', url: (type, id, s, e) => type === 'movie' ? `https://1embed.cc/embed/movie/${id}` : `https://1embed.cc/embed/tv/${id}/${s}/${e}` },
     { name: 'CinemaOS', url: (type, id, s, e) => type === 'movie' ? `https://cinemaos.tech/player/${id}` : `https://cinemaos.tech/player/${id}/${s}/${e}` },
     { name: 'SpencerDevs', url: (type, id, s, e) => type === 'movie' ? `https://spencerdevs.xyz/movie/${id}` : `https://spencerdevs.xyz/tv/${id}/${s}/${e}` },
-    { name: 'Vidzee', url: (type, id, s, e) => type === 'movie' ? `https://player.vidzee.wtf/v2/embed/movie/${id}` : `https://player.vidzee.wtf/v2/embed/tv/${id}/${s}/${e}` },
     { name: 'Rivestream', url: (type, id, s, e) => type === 'movie' ? `https://watch.rivestream.app/embed?type=movie&id=${id}` : `https://watch.rivestream.app/embed?type=tv&id=${id}&season=${s}&episode=${e}` },
-    { name: 'VidLink', url: (type, id, s, e) => type === 'movie' ? `https://vidlink.pro/movie/${id}` : `https://vidlink.pro/tv/${id}/${s}/${e}` },
-    { name: '🎬 CinemaOS (Site)', url: () => `https://cinemaos.live`, openInNewTab: true },
     { name: 'Netplayz (Site)', url: () => `https://netplayz.live`, openInNewTab: true },
+    { name: '🎬 CinemaOS (Site)', url: () => `https://cinemaos.live`, openInNewTab: true },
     { name: '🎌 AnimePahe (Site)', url: () => `https://animepahe.org`, openInNewTab: true }
   ];
+
+  // Hardcoded order for non-logged users (your desired order)
+  const DEFAULT_ORDER_NAMES = [
+    "VixSrc",
+    "Videasy",
+    "VidFast",
+    "VidUp",
+    "VidCore",
+    "VidLink",
+    "111Movies",
+    "EmbedMaster",
+    "ZxcStream",
+    "AnyEmbed",
+    "Peachify",
+    "FilmU",
+    "Nxsha",
+    "NHD API",
+    "Vidsrc",
+    "VAPlayer",
+    "VidRock",
+    "Vidzee",
+    "Cinezo",
+    "1Embed",
+    "2Embed",
+    "NontonGo",
+    "Xpass",
+    "CinemaOS",
+    "SpencerDevs",
+    "Rivestream",
+    "Netplayz (Site)",
+    "🎬 CinemaOS (Site)",
+    "🎌 AnimePahe (Site)"
+  ];
+
+  function buildOrderedSources(orderNames) {
+    const ordered = [];
+    for (const name of orderNames) {
+      const found = SOURCE_DEFINITIONS.find(s => s.name === name);
+      if (found) ordered.push(found);
+      else console.warn(`Source not found: ${name}`);
+    }
+    // Append any missing sources (should not happen if orderNames is complete)
+    for (const src of SOURCE_DEFINITIONS) {
+      if (!ordered.find(s => s.name === src.name)) ordered.push(src);
+    }
+    return ordered;
+  }
 
   let EMBED_SOURCES = [];
 
@@ -641,87 +688,38 @@
     }
   }
 
-  // ========== GLOBAL DEFAULT SOURCE ORDER (always fetches from DB) ==========
-  async function loadDefaultSourceOrder() {
-    try {
-      const { data, error } = await sb
-        .from('global_config')
-        .select('default_source_order')
-        .eq('id', 1)
-        .maybeSingle();
-      if (!error && data && data.default_source_order && Array.isArray(data.default_source_order)) {
-        const orderNames = data.default_source_order;
-        const orderedSources = [];
-        for (const name of orderNames) {
-          const found = SOURCE_DEFINITIONS.find(s => s.name === name);
-          if (found) orderedSources.push(found);
-        }
-        if (orderedSources.length === SOURCE_DEFINITIONS.length) {
-          EMBED_SOURCES = orderedSources;
-          console.log("Loaded global default order from DB:", orderNames);
-          populateSources();
-          return;
-        }
-      }
-      // Fallback to hardcoded order
-      EMBED_SOURCES = [...SOURCE_DEFINITIONS];
-      console.log("Using hardcoded fallback source order");
-    } catch (err) {
-      console.error("Error loading default source order:", err);
-      EMBED_SOURCES = [...SOURCE_DEFINITIONS];
-    }
-    populateSources();
-  }
-
-  async function saveDefaultSourceOrder(orderNames) {
-    try {
-      const { error } = await sb
-        .from('global_config')
-        .upsert({ id: 1, default_source_order: orderNames, updated_at: new Date().toISOString() });
-      if (error) console.error("Error saving default source order:", error);
-      else console.log("✅ Global default source order saved to DB");
-    } catch (err) {
-      console.error("Error saving default order:", err);
-    }
-  }
-
-  // ========== USER PERSONAL SOURCE ORDER (fallback to global default) ==========
+  // ========== USER PERSONAL SOURCE ORDER (for logged-in users) ==========
   async function loadUserSourceOrder() {
     if (!currentUser) return;
     try {
       const { data, error } = await sb.from('user_settings').select('source_order').eq('id', currentUser.id).maybeSingle();
       if (!error && data && data.source_order && Array.isArray(data.source_order)) {
-        const orderNames = data.source_order;
-        const orderedSources = [];
-        for (const name of orderNames) {
-          const found = SOURCE_DEFINITIONS.find(s => s.name === name);
-          if (found) orderedSources.push(found);
-        }
+        const orderedSources = buildOrderedSources(data.source_order);
         if (orderedSources.length === SOURCE_DEFINITIONS.length) {
           EMBED_SOURCES = orderedSources;
-          console.log("Loaded user's personal source order:", orderNames);
+          console.log("Loaded user's personal source order:", data.source_order);
           populateSources();
           return;
         }
       }
-      // No personal order – load the latest global default
-      console.log("No personal order, loading latest global default");
-      await loadDefaultSourceOrder();
+      // Fallback to default order for logged-in users without personal order
+      console.log("No personal order, using hardcoded default order");
+      EMBED_SOURCES = buildOrderedSources(DEFAULT_ORDER_NAMES);
     } catch (err) { 
       console.error("Error loading user source order:", err);
-      await loadDefaultSourceOrder();
+      EMBED_SOURCES = buildOrderedSources(DEFAULT_ORDER_NAMES);
     }
+    populateSources();
   }
 
   async function saveUserSourceOrder() {
     if (!currentUser) return;
     const namesOnly = EMBED_SOURCES.map(s => s.name);
-    // Save personal order
     await sb.from('user_settings').upsert({ id: currentUser.id, source_order: namesOnly, updated_at: new Date().toISOString() });
-    // If current user is admin, also update global default
+    console.log("User's personal source order saved");
+    // Admin can still save personal order, but it will NOT affect non-logged users
     if (currentUser.email === 'vimell777@gmail.com') {
-      await saveDefaultSourceOrder(namesOnly);
-      console.log("👑 Admin order saved as global default");
+      console.log("Admin order saved (personal only, not global default)");
     }
   }
 
@@ -737,7 +735,7 @@
     loadSelectedSourceIndex();
   }
 
-  // ========== LOCALSTORAGE BACKUP ==========
+  // ========== LOCALSTORAGE BACKUP (full implementation) ==========
   function getLocalStorageKey() {
     if (!currentUser) return 'wizhub_guest_progress';
     return `wizhub_${currentUser.id}_progress`;
@@ -841,7 +839,7 @@
     }
   }
 
-  // ========== SAVE/LOAD PROGRESS ==========
+  // ========== SAVE/LOAD PROGRESS (unchanged) ==========
   async function saveProgressToDB() {
     if (!currentUser || !currentMedia) return;
     const season = currentMedia.type === 'tv' ? currentSeason : 0;
@@ -1409,14 +1407,16 @@
       document.getElementById('authContainer').classList.add('hidden');
       document.getElementById('userContainer').classList.remove('hidden');
       userAvatarDiv.innerText = user.email ? user.email.charAt(0).toUpperCase() : 'U';
-      await loadUserSourceOrder();   // loads personal order or falls back to latest global default
+      await loadUserSourceOrder();
       await renderContinueWatching();
       updateContinueVisibility();
     } else {
       document.getElementById('authContainer').classList.remove('hidden');
       document.getElementById('userContainer').classList.add('hidden');
-      // For non-logged-in users, always reload the latest global default
-      await loadDefaultSourceOrder();
+      // Non-logged-in users always get the hardcoded default order
+      EMBED_SOURCES = buildOrderedSources(DEFAULT_ORDER_NAMES);
+      console.log("Non-logged user: using hardcoded default order");
+      populateSources();
       renderContinueWatching();
       playerPanel.classList.add('hidden');
       updateContinueVisibility();
@@ -1514,8 +1514,13 @@
 
   // ========== INITIALIZE ==========
   async function init() {
-    await loadDefaultSourceOrder();   // load global default (for non-logged-in & as fallback)
-    await updateAuthUI();             // if logged in, this will override with personal order if exists
+    // For non-logged users, the order is set in updateAuthUI.
+    // But we need to set it also before auth check to avoid empty dropdown.
+    if (!currentUser) {
+      EMBED_SOURCES = buildOrderedSources(DEFAULT_ORDER_NAMES);
+      populateSources();
+    }
+    await updateAuthUI();
     fetchTrending();
     sb.auth.onAuthStateChange(() => updateAuthUI());
     updateContinueVisibility();
