@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB – Admin Default Order + Local Backup</title>
+  <title>WIZHUB – Admin Default Order (Global) + Local Backup</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* All styles (identical to previous working version) */
+    /* All styles unchanged – same as the fully working version */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0c10; font-family: 'Inter', system-ui, sans-serif; }
     .glass-nav {
@@ -641,7 +641,7 @@
     }
   }
 
-  // ========== SOURCE ORDER MANAGEMENT ==========
+  // ========== CORE: LOAD GLOBAL DEFAULT (for non-logged-in & fallback) ==========
   async function loadDefaultSourceOrder() {
     try {
       const { data, error } = await sb
@@ -679,12 +679,13 @@
         .from('global_config')
         .upsert({ id: 1, default_source_order: orderNames, updated_at: new Date().toISOString() });
       if (error) console.error("Error saving default source order:", error);
-      else console.log("Global default source order saved to DB");
+      else console.log("✅ Global default source order saved to DB");
     } catch (err) {
       console.error("Error saving default order:", err);
     }
   }
 
+  // ========== USER PERSONAL SOURCE ORDER (with fallback to latest global default) ==========
   async function loadUserSourceOrder() {
     if (!currentUser) return;
     try {
@@ -703,9 +704,13 @@
           return;
         }
       }
-      // No personal order – global default is already loaded
-      console.log("No personal order, using global default");
-    } catch (err) { console.error("Error loading user source order:", err); }
+      // No personal order – load the latest global default (ensures admin changes propagate)
+      console.log("No personal order, loading latest global default");
+      await loadDefaultSourceOrder();
+    } catch (err) { 
+      console.error("Error loading user source order:", err);
+      await loadDefaultSourceOrder();
+    }
   }
 
   async function saveUserSourceOrder() {
@@ -716,7 +721,7 @@
     // If current user is admin, also update global default
     if (currentUser.email === 'vimell777@gmail.com') {
       await saveDefaultSourceOrder(namesOnly);
-      console.log("Admin order saved as global default");
+      console.log("👑 Admin order saved as global default");
     }
   }
 
@@ -732,7 +737,7 @@
     loadSelectedSourceIndex();
   }
 
-  // ========== LOCALSTORAGE BACKUP (full implementation) ==========
+  // ========== LOCALSTORAGE BACKUP ==========
   function getLocalStorageKey() {
     if (!currentUser) return 'wizhub_guest_progress';
     return `wizhub_${currentUser.id}_progress`;
@@ -1404,13 +1409,13 @@
       document.getElementById('authContainer').classList.add('hidden');
       document.getElementById('userContainer').classList.remove('hidden');
       userAvatarDiv.innerText = user.email ? user.email.charAt(0).toUpperCase() : 'U';
-      await loadUserSourceOrder();
+      await loadUserSourceOrder();   // loads personal order or falls back to latest global default
       await renderContinueWatching();
       updateContinueVisibility();
     } else {
       document.getElementById('authContainer').classList.remove('hidden');
       document.getElementById('userContainer').classList.add('hidden');
-      // Non-logged-in users use the already loaded global default (EMBED_SOURCES)
+      // Non-logged-in users use the already loaded global default (EMBED_SOURCES is set by loadDefaultSourceOrder in init)
       renderContinueWatching();
       playerPanel.classList.add('hidden');
       updateContinueVisibility();
@@ -1508,8 +1513,8 @@
 
   // ========== INITIALIZE ==========
   async function init() {
-    await loadDefaultSourceOrder();   // load global default (for non-logged-in)
-    await updateAuthUI();             // if logged in, override with personal order
+    await loadDefaultSourceOrder();   // load global default (for non-logged-in & as fallback)
+    await updateAuthUI();             // if logged in, this will override with personal order if exists
     fetchTrending();
     sb.auth.onAuthStateChange(() => updateAuthUI());
     updateContinueVisibility();
