@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>WIZHUB – Admin Default Order + Local Backup</title>
+  <title>WIZHUB – Admin Default Order (Global) + Local Backup</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'%3E%3Cpath d='M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z'/%3E%3C/svg%3E">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -641,7 +641,7 @@
     }
   }
 
-  // ========== CORE: LOAD GLOBAL DEFAULT (for non-logged-in & fallback) ==========
+  // ========== GLOBAL DEFAULT SOURCE ORDER (always fetches from DB) ==========
   async function loadDefaultSourceOrder() {
     try {
       const { data, error } = await sb
@@ -685,7 +685,7 @@
     }
   }
 
-  // ========== USER PERSONAL SOURCE ORDER (with fallback to latest global default) ==========
+  // ========== USER PERSONAL SOURCE ORDER (fallback to global default) ==========
   async function loadUserSourceOrder() {
     if (!currentUser) return;
     try {
@@ -704,7 +704,7 @@
           return;
         }
       }
-      // No personal order – load the latest global default (ensures admin changes propagate)
+      // No personal order – load the latest global default
       console.log("No personal order, loading latest global default");
       await loadDefaultSourceOrder();
     } catch (err) { 
@@ -1415,7 +1415,8 @@
     } else {
       document.getElementById('authContainer').classList.remove('hidden');
       document.getElementById('userContainer').classList.add('hidden');
-      // Non-logged-in users use the already loaded global default (EMBED_SOURCES is set by loadDefaultSourceOrder in init)
+      // For non-logged-in users, always reload the latest global default
+      await loadDefaultSourceOrder();
       renderContinueWatching();
       playerPanel.classList.add('hidden');
       updateContinueVisibility();
